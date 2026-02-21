@@ -19,7 +19,7 @@ import { bjorklund } from './logic/bjorklund'
 import { motion, AnimatePresence } from 'framer-motion'
 
 function App() {
-    const { isInitialized, isPlaying, bpm, initialize, togglePlay, setBpm } = useAudioStore()
+    const { isInitialized, isPlaying, bpm, swing, initialize, togglePlay, setBpm, setSwing } = useAudioStore()
 
     // Haptic feedback effect
     useEffect(() => {
@@ -53,13 +53,21 @@ function App() {
             const mainBtn = window.Telegram.WebApp.MainButton
 
             if (activeTab === 'export') {
-                mainBtn.setText('ЭКСПОРТ MIDI')
-                mainBtn.setParams({ color: '#31b545', text_color: '#ffffff' })
+                mainBtn.setText(isExporting ? 'ОТПРАВКА...' : 'ЭКСПОРТ MIDI')
+                mainBtn.setParams({
+                    color: '#31b545',
+                    text_color: '#ffffff',
+                    is_active: !isExporting
+                })
+                if (isExporting) mainBtn.showProgress()
+                else mainBtn.hideProgress()
+
                 const handleExportBtn = () => handleExport()
                 mainBtn.onClick(handleExportBtn)
                 mainBtn.show()
                 return () => mainBtn.offClick(handleExportBtn)
             } else {
+                mainBtn.hideProgress()
                 mainBtn.setText(isPlaying ? 'СТОП' : 'ИГРАТЬ')
                 mainBtn.setParams({
                     color: isPlaying ? '#ff3b30' : '#3390ec',
@@ -78,11 +86,15 @@ function App() {
     const pad = usePadStore()
 
     const handleExport = async () => {
-        if (!window.Telegram?.WebApp) return
+        const isTelegram = !!window.Telegram?.WebApp?.initData
         setIsExporting(true)
 
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success')
+        }
+
         try {
-            // 1. Подготовка данных для экспорта
+            // 1. Prepare patterns
             const patterns = {
                 kick: bjorklund(drums.kick.steps, drums.kick.pulses),
                 snare: bjorklund(drums.snare.steps, drums.snare.pulses),
@@ -91,7 +103,7 @@ function App() {
                 clap: bjorklund(drums.clap.steps, drums.clap.pulses)
             }
 
-            // 2. Генерация MIDI
+            // 2. Generate MIDI
             const midiData = exportToMidi(
                 bpm,
                 patterns,
@@ -99,34 +111,70 @@ function App() {
                 seq.stages,
                 seq.snakeGrid,
                 seq.snakePattern,
-                { notes: [harmony.root + '3'], active: pad.active } // Simplified pad notes for now
+                {
+                    root: harmony.root,
+                    scale: harmony.scale,
+                    complexity: pad.complexity,
+                    active: pad.active
+                }
             )
-            const base64Midi = btoa(String.fromCharCode(...midiData))
 
-            // 3. Отправка на бэкенд
-            // В продакшене используйте реальный URL вашего сервера
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+            const filename = `midi_studio_${Date.now()}.mid`
 
-            const response = await fetch(`${API_URL}/upload-midi`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    initData: window.Telegram.WebApp.initData,
-                    midiBase64: base64Midi,
-                    filename: `midi_studio_${Date.now()}.mid`
-                })
-            })
+            // 3. Export logic
+            if (isTelegram && window.Telegram) {
+                const base64Midi = btoa(String.fromCharCode(...(midiData as any)))
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
-            if (response.ok) {
-                window.Telegram.WebApp.showAlert('MIDI файл отправлен в чат! 🎹')
+                try {
+                    const response = await fetch(`${API_URL}/upload-midi`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            initData: window.Telegram.WebApp.initData,
+                            midiBase64: base64Midi,
+                            filename
+                        })
+                    })
+
+                    if (response.ok) {
+                        window.Telegram.WebApp.showAlert('MIDI файл отправлен в чат! 🎹')
+                    } else {
+                        throw new Error('Server error')
+                    }
+                } catch (err) {
+                    console.error('Backend export failed, falling back to download', err)
+                    downloadFallback(midiData, filename)
+                }
             } else {
-                throw new Error('Server error')
+                downloadFallback(midiData, filename)
             }
         } catch (err) {
             console.error(err)
-            window.Telegram.WebApp.showAlert('Ошибка экспорта. Убедитесь, что сервер запущен.')
+            const msg = 'Ошибка экспорта.'
+            if (window.Telegram?.WebApp?.showAlert) {
+                window.Telegram.WebApp.showAlert(msg)
+            } else {
+                alert(msg)
+            }
         } finally {
             setIsExporting(false)
+        }
+    }
+
+    const downloadFallback = (data: Uint8Array, filename: string) => {
+        const blob = new Blob([data as any], { type: 'audio/midi' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+
+        if (window.Telegram?.WebApp?.showAlert) {
+            window.Telegram.WebApp.showAlert('Файл скачан на устройство 💾')
         }
     }
 
@@ -207,9 +255,9 @@ function App() {
                                 />
                                 <Knob
                                     label="СВИНГ"
-                                    value={useAudioStore.getState().swing}
+                                    value={swing}
                                     min={0} max={1} step={0.01}
-                                    onChange={(v) => useAudioStore.getState().setSwing(v)}
+                                    onChange={(v) => setSwing(v)}
                                     size={48}
                                 />
                             </div>
@@ -233,26 +281,43 @@ function App() {
                                     {activeTab === 'pads' && <PadsView />}
                                     {activeTab === 'harmony' && <HarmonyView />}
                                     {activeTab === 'export' && (
-                                        <div className="card" style={{ textAlign: 'center' }}>
+                                        <div className="card" style={{ textAlign: 'center', padding: '32px 20px' }}>
+                                            <div style={{
+                                                width: '64px', height: '64px', borderRadius: '32px',
+                                                background: 'var(--tg-theme-button-color)', display: 'flex',
+                                                alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px',
+                                                color: 'white', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                                            }}>
+                                                <Send size={32} />
+                                            </div>
                                             <h3>Экспортировать сессию</h3>
-                                            <p style={{ fontSize: '14px', color: 'var(--tg-theme-hint-color)' }}>
-                                                Мы отправим MIDI-файл в твой чат Telegram
+                                            <p style={{ fontSize: '14px', color: 'var(--tg-theme-hint-color)', marginTop: '8px', lineHeight: '1.4' }}>
+                                                Создай полноценную композицию! Мы отправим MIDI-файл со всеми 4 дорожками в твой чат Telegram.
                                             </p>
-                                            <button
-                                                disabled={isExporting}
-                                                onClick={handleExport}
-                                                style={{
-                                                    marginTop: '20px',
-                                                    width: '100%',
-                                                    padding: '18px',
-                                                    backgroundColor: 'var(--tg-theme-button-color)',
-                                                    color: 'white',
-                                                    opacity: isExporting ? 0.5 : 1
-                                                }}
-                                            >
-                                                <Send size={18} />
-                                                {isExporting ? 'Отправляем...' : 'Отправить в Telegram'}
-                                            </button>
+                                            <div style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <button
+                                                    disabled={isExporting}
+                                                    onClick={handleExport}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '16px',
+                                                        backgroundColor: 'var(--tg-theme-button-color)',
+                                                        color: 'var(--tg-theme-button-text-color)',
+                                                        fontWeight: 'bold',
+                                                        borderRadius: '12px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '8px',
+                                                        opacity: isExporting ? 0.6 : 1
+                                                    }}
+                                                >
+                                                    {isExporting ? 'ОБРАБОТКА...' : 'ОТПРАВИТЬ В ЧАТ'}
+                                                </button>
+                                                <p style={{ fontSize: '11px', color: 'var(--tg-theme-hint-color)' }}>
+                                                    Если бот не отвечает, файл будет скачан напрямую.
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
                                 </motion.div>

@@ -29,20 +29,20 @@ export function PadsView() {
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '24px', gap: '12px' }}>
                     <Knob
                         label="Яркость"
                         value={brightness}
                         min={0} max={1} step={0.01}
                         onChange={handleBrightnessChange}
-                        size={80}
+                        size={70}
                     />
                     <Knob
                         label="Сложность"
                         value={complexity}
                         min={0} max={1} step={0.01}
                         onChange={(v) => setParams({ complexity: v })}
-                        size={80}
+                        size={70}
                     />
                 </div>
 

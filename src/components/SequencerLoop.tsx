@@ -17,8 +17,28 @@ export function SequencerLoop() {
 
     const stepRef = useRef(0)
     const stagePulseRef = useRef(0)
-    const currentStageIdxRef = useRef(0)
     const snakeWalkerRef = useRef(new GridWalker())
+
+    // Pattern Cache to optimize performance
+    const drumPatternsRef = useRef<Record<string, number[]>>({
+        kick: [], snare: [], hihat: [], hihatOpen: [], clap: []
+    })
+
+    useEffect(() => {
+        const updatePatterns = () => {
+            const d = useDrumStore.getState()
+            drumPatternsRef.current = {
+                kick: bjorklund(d.kick.steps, d.kick.pulses),
+                snare: bjorklund(d.snare.steps, d.snare.pulses),
+                hihat: bjorklund(d.hihat.steps, d.hihat.pulses),
+                hihatOpen: bjorklund(d.hihatOpen.steps, d.hihatOpen.pulses),
+                clap: bjorklund(d.clap.steps, d.clap.pulses)
+            }
+        }
+
+        updatePatterns()
+        return useDrumStore.subscribe(updatePatterns)
+    }, [])
 
     useEffect(() => {
         if (!isInitialized || !acidSynth || !drumMachine) return
@@ -28,18 +48,18 @@ export function SequencerLoop() {
             const totalStep = stepRef.current
 
             // Access current state directly from store to avoid loop restarts
-            const currentDrums = useDrumStore.getState()
             const currentBass = useBassStore.getState()
             const currentSeq = useSequencerStore.getState()
             const currentHarmony = useHarmonyStore.getState()
             const currentPads = usePadStore.getState()
 
-            // 1. Drums (Euclidean)
-            if (bjorklund(currentDrums.kick.steps, currentDrums.kick.pulses)[step]) drumMachine.triggerDrum('kick', time)
-            if (bjorklund(currentDrums.snare.steps, currentDrums.snare.pulses)[step]) drumMachine.triggerDrum('snare', time)
-            if (bjorklund(currentDrums.hihat.steps, currentDrums.hihat.pulses)[step]) drumMachine.triggerDrum('hihat', time)
-            if (bjorklund(currentDrums.hihatOpen.steps, currentDrums.hihatOpen.pulses)[step]) drumMachine.triggerDrum('hihatOpen', time)
-            if (bjorklund(currentDrums.clap.steps, currentDrums.clap.pulses)[step]) drumMachine.triggerDrum('clap', time)
+            // 1. Drums (Euclidean - using cached patterns)
+            const patterns = drumPatternsRef.current
+            if (patterns.kick[step % patterns.kick.length]) drumMachine.triggerDrum('kick', time)
+            if (patterns.snare[step % patterns.snare.length]) drumMachine.triggerDrum('snare', time)
+            if (patterns.hihat[step % patterns.hihat.length]) drumMachine.triggerDrum('hihat', time)
+            if (patterns.hihatOpen[step % patterns.hihatOpen.length]) drumMachine.triggerDrum('hihatOpen', time)
+            if (patterns.clap[step % patterns.clap.length]) drumMachine.triggerDrum('clap', time)
 
             // 2. Bass (Sting logic)
             const bassStep = currentBass.pattern[step]

@@ -51,38 +51,36 @@ export function SequencerLoop() {
 
             // 3. Sequencer (ML-185 + Snake Grid)
             const stage = currentSeq.stages[currentSeq.currentStageIndex]
-            if (stagePulseRef.current === 0) {
-                const triggerGate = () => {
-                    const shouldPlay = Math.random() < stage.probability
-                    if (shouldPlay && acidSynth) {
-                        const note = currentSeq.snakeGrid[currentSeq.currentSnakeIndex]
-                        acidSynth.triggerNote(Tone.Frequency(note, 'midi').toNote(), '16n', time, stage.velocity)
 
+            // Helper to trigger note and optionally advance snake
+            const triggerStep = (duration: string, velocity: number, advanceSnake: boolean) => {
+                const shouldPlay = Math.random() < stage.probability
+                if (shouldPlay && acidSynth) {
+                    const note = currentSeq.snakeGrid[currentSeq.currentSnakeIndex]
+                    acidSynth.triggerNote(Tone.Frequency(note, 'midi').toNote(), duration, time, velocity)
+
+                    if (advanceSnake) {
                         const nextSnake = GridWalker.getNextIndex(currentSeq.currentSnakeIndex, currentSeq.snakePattern)
                         useSequencerStore.getState().setCurrentSnakeIndex(nextSnake)
                     }
                 }
+            }
 
-                if (stage.gateMode === 1 || stage.gateMode === 2) { // Single or Multi start
-                    triggerGate()
+            if (stagePulseRef.current === 0) {
+                if (stage.gateMode === 1) { // Single
+                    triggerStep('16n', stage.velocity, true)
+                } else if (stage.gateMode === 2) { // Multi start
+                    triggerStep('16n', stage.velocity, true)
                 } else if (stage.gateMode === 3) { // Hold/Tie
-                    const note = currentSeq.snakeGrid[currentSeq.currentSnakeIndex]
-                    acidSynth?.triggerNote(Tone.Frequency(note, 'midi').toNote(), '8n', time, stage.velocity)
+                    // Hold mode: trigger note (longer duration) but DO NOT advance snake index (repeat same pitch)
+                    // Added probability check here
+                    triggerStep('8n', stage.velocity, false)
                 }
-            } else if (stage.gateMode === 2) { // Multi pulse
+            } else if (stage.gateMode === 2) { // Multi pulse repeats
                 const pulseStep = stagePulseRef.current % Math.max(1, stage.length)
                 if (pulseStep === 0) {
-                    const triggerGate = () => {
-                        const shouldPlay = Math.random() < stage.probability
-                        if (shouldPlay && acidSynth) {
-                            const note = currentSeq.snakeGrid[currentSeq.currentSnakeIndex]
-                            acidSynth.triggerNote(Tone.Frequency(note, 'midi').toNote(), '32n', time, stage.velocity * 0.8)
-
-                            const nextSnake = GridWalker.getNextIndex(currentSeq.currentSnakeIndex, currentSeq.snakePattern)
-                            useSequencerStore.getState().setCurrentSnakeIndex(nextSnake)
-                        }
-                    }
-                    triggerGate()
+                    // Multi repeats: shorter duration, slightly lower velocity, advance snake
+                    triggerStep('32n', stage.velocity * 0.8, true)
                 }
             }
 

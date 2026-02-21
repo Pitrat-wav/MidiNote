@@ -81,6 +81,26 @@ function App() {
         }
     }, [isInitialized, isPlaying, togglePlay, activeTab])
 
+    // Global Transport Shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!isInitialized) return
+
+            // Ignore if focus is on an input or textarea
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return
+            }
+
+            if (e.code === 'Space') {
+                e.preventDefault() // Prevent scrolling
+                togglePlay()
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [isInitialized, togglePlay])
+
     const seq = useSequencerStore()
     const harmony = useHarmonyStore()
     const pad = usePadStore()

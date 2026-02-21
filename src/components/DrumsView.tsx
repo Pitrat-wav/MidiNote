@@ -7,7 +7,7 @@ import { useAudioStore, AudioState } from '../store/audioStore'
 import { bjorklund } from '../logic/bjorklund'
 
 export function DrumsView() {
-    const { kick, snare, hihat, kit, setParams, setKit } = useDrumStore()
+    const { kick, snare, hihat, hihatOpen, clap, kit, setParams, setKit } = useDrumStore()
     const { drumMachine } = useAudioStore()
 
     const updateDrum = (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', params: any) => {
@@ -59,14 +59,14 @@ export function DrumsView() {
                             <div style={{ width: '60px', fontWeight: 'bold', fontSize: '10px' }}>{d.label}</div>
                             <Knob
                                 label="Пульс"
-                                value={useDrumStore.getState()[d.id].pulses}
+                                value={useDrumStore((state) => state[d.id].pulses)}
                                 min={0} max={16} step={1}
                                 onChange={(v) => updateDrum(d.id, { pulses: v })}
                                 size={40}
                             />
                             <Knob
                                 label="Tone"
-                                value={useDrumStore.getState()[d.id].pitch}
+                                value={useDrumStore((state) => state[d.id].pitch)}
                                 min={0} max={1} step={0.01}
                                 onChange={(v) => updateDrum(d.id, { pitch: v })}
                                 size={40}
@@ -81,8 +81,8 @@ export function DrumsView() {
                         { name: 'KICK', data: kick },
                         { name: 'SNARE', data: snare },
                         { name: 'HIHAT', data: hihat },
-                        { name: 'OPEN', data: useDrumStore.getState().hihatOpen },
-                        { name: 'CLAP', data: useDrumStore.getState().clap }
+                        { name: 'OPEN', data: hihatOpen },
+                        { name: 'CLAP', data: clap }
                     ].map((d, idx) => {
                         const pattern = bjorklund(d.data.steps, d.data.pulses)
                         return (

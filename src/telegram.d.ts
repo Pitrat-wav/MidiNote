@@ -10,9 +10,13 @@ interface TelegramWebApp {
     }
     MainButton: {
         setText: (text: string) => void
-        setParams: (params: { color?: string, text_color?: string }) => void
+        setParams: (params: { color?: string, text_color?: string, is_active?: boolean, is_visible?: boolean }) => void
         show: () => void
         hide: () => void
+        enable: () => void
+        disable: () => void
+        showProgress: (leaveActive?: boolean) => void
+        hideProgress: () => void
         onClick: (fn: () => void) => void
         offClick: (fn: () => void) => void
     }

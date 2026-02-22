@@ -1,0 +1,12 @@
+
+> telegram-midi@0.1.0 dev
+> vite
+
+
+  VITE v5.4.21  ready in 239 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://192.168.0.2:3000/
+2:14:20 AM [vite] hmr update /src/App.tsx, /src/components/DrumsView.tsx, /src/components/PadsView.tsx, /src/components/SequencerLoop.tsx, /src/components/BassView.tsx, /src/components/MixerView.tsx
+2:14:25 AM [vite] hmr update /src/App.tsx, /src/components/DrumsView.tsx, /src/components/PadsView.tsx, /src/components/SequencerLoop.tsx, /src/components/BassView.tsx, /src/components/MixerView.tsx
+2:14:45 AM [vite] hmr update /src/App.tsx, /src/components/DrumsView.tsx, /src/components/PadsView.tsx, /src/components/SequencerLoop.tsx, /src/components/BassView.tsx, /src/components/MixerView.tsx

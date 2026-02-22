@@ -3,6 +3,7 @@ import * as Tone from 'tone'
 import { AcidSynth } from '../logic/AcidSynth'
 import { DrumMachine } from '../logic/DrumMachine'
 import { PadSynth } from '../logic/PadSynth'
+import { useDrumStore } from './instrumentStore'
 
 export interface AudioState {
     isInitialized: boolean
@@ -47,6 +48,13 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         const drums = new DrumMachine()
         const pads = new PadSynth()
 
+        // Sync initial drum parameters
+        const drumStore = useDrumStore.getState()
+        drums.setKit(drumStore.kit)
+        ;(['kick', 'snare', 'hihat', 'hihatOpen', 'clap'] as const).forEach(id => {
+            drums.setDrumParams(id, drumStore[id].pitch, drumStore[id].decay)
+        })
+
         Tone.Transport.bpm.value = get().bpm
         Tone.Transport.swing = get().swing
 
@@ -74,7 +82,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         set((state) => ({ volumes: { ...state.volumes, [channel]: value } }))
         const { acidSynth, drumMachine, padSynth } = get()
         if (channel === 'acid' && acidSynth) acidSynth.synth.volume.value = Tone.gainToDb(value)
-        if (channel === 'drums' && drumMachine) drumMachine.comp.threshold.value = -24 // Simplified
+        if (channel === 'drums' && drumMachine) drumMachine.volume.gain.value = value
         if (channel === 'pads' && padSynth) padSynth.synth.volume.value = Tone.gainToDb(value)
     },
 

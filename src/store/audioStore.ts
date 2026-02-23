@@ -74,7 +74,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         set((state) => ({ volumes: { ...state.volumes, [channel]: value } }))
         const { acidSynth, drumMachine, padSynth } = get()
         if (channel === 'acid' && acidSynth) acidSynth.synth.volume.value = Tone.gainToDb(value)
-        if (channel === 'drums' && drumMachine) drumMachine.comp.threshold.value = -24 // Simplified
+        if (channel === 'drums' && drumMachine) drumMachine.masterGain.gain.value = value
         if (channel === 'pads' && padSynth) padSynth.synth.volume.value = Tone.gainToDb(value)
     },
 

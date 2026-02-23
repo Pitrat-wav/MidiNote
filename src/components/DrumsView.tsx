@@ -71,6 +71,13 @@ export function DrumsView() {
                                 onChange={(v) => updateDrum(d.id, { pitch: v })}
                                 size={40}
                             />
+                            <Knob
+                                label="Decay"
+                                value={useDrumStore((state) => state[d.id].decay)}
+                                min={0} max={1} step={0.01}
+                                onChange={(v) => updateDrum(d.id, { decay: v })}
+                                size={40}
+                            />
                         </div>
                     ))}
                 </div>

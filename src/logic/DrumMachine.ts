@@ -1,61 +1,93 @@
 import * as Tone from 'tone'
+import { TR808Kick } from './drum/TR808Kick'
+import { TR909Kick } from './drum/TR909Kick'
+import { TR808Snare } from './drum/TR808Snare'
+import { TR909Snare } from './drum/TR909Snare'
+import { TR808HiHat } from './drum/TR808HiHat'
+import { TR808Clap } from './drum/TR808Clap'
 
 export class DrumMachine {
-    kick: Tone.Player
-    snare: Tone.Player
-    hihat: Tone.Player
-    hihatOpen: Tone.Player
-    clap: Tone.Player
+    private kick808: TR808Kick
+    private kick909: TR909Kick
+    private snare808: TR808Snare
+    private snare909: TR909Snare
+    private hihat808: TR808HiHat
+    private clap808: TR808Clap
+
+    output: Tone.Gain
+    saturation: Tone.WaveShaper
     comp: Tone.Compressor
+
     currentKit: '808' | '909' = '808'
 
-    private kits = {
-        '808': {
-            kick: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/808/kick.wav",
-            snare: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/808/snare.wav",
-            hihat: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/808/hihat.wav",
-            hihatOpen: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/808/openhat.wav",
-            clap: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/808/clap.wav"
-        },
-        '909': {
-            kick: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/909/kick.wav",
-            snare: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/909/snare.wav",
-            hihat: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/909/hihat.wav",
-            hihatOpen: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/909/openhat.wav",
-            clap: "https://raw.githubusercontent.com/ryohey/signal/master/public/audio/909/clap.wav"
-        }
+    // Internal params cache
+    private params = {
+        kick: { pitch: 0.5, decay: 0.5 },
+        snare: { pitch: 0.5, decay: 0.5 },
+        hihat: { pitch: 0.5, decay: 0.5 },
+        hihatOpen: { pitch: 0.5, decay: 0.5 },
+        clap: { pitch: 0.5, decay: 0.5 }
     }
 
     constructor() {
-        this.comp = new Tone.Compressor(-24, 4).toDestination()
+        this.output = new Tone.Gain(1)
+        this.saturation = new Tone.WaveShaper(this.makeDistortionCurve(15))
+        this.comp = new Tone.Compressor(-24, 4)
 
-        this.kick = new Tone.Player(this.kits['808'].kick).connect(this.comp)
-        this.snare = new Tone.Player(this.kits['808'].snare).connect(this.comp)
-        this.hihat = new Tone.Player(this.kits['808'].hihat).connect(this.comp)
-        this.hihatOpen = new Tone.Player(this.kits['808'].hihatOpen).connect(this.comp)
-        this.clap = new Tone.Player(this.kits['808'].clap).connect(this.comp)
+        // Connect chain
+        this.output.chain(this.saturation, this.comp, Tone.Destination)
+
+        this.kick808 = new TR808Kick(this.output)
+        this.kick909 = new TR909Kick(this.output)
+        this.snare808 = new TR808Snare(this.output)
+        this.snare909 = new TR909Snare(this.output)
+        this.hihat808 = new TR808HiHat(this.output)
+        this.clap808 = new TR808Clap(this.output)
+    }
+
+    private makeDistortionCurve(amount: number) {
+        const k = amount;
+        const n_samples = 44100;
+        const curve = new Float32Array(n_samples);
+        const deg = Math.PI / 180;
+        for (let i = 0; i < n_samples; ++i ) {
+            let x = i * 2 / n_samples - 1;
+            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+        }
+        return curve;
     }
 
     setKit(kit: '808' | '909') {
         this.currentKit = kit
-        this.kick.load(this.kits[kit].kick)
-        this.snare.load(this.kits[kit].snare)
-        this.hihat.load(this.kits[kit].hihat)
-        this.hihatOpen.load(this.kits[kit].hihatOpen)
-        this.clap.load(this.kits[kit].clap)
     }
 
     setDrumParams(drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', pitch: number, decay: number) {
-        const player = this[drum]
-        // Pitch: 0.5 -> 1.0 (normal), 0 -> 0.5, 1 -> 2.0
-        player.playbackRate = pitch * 2
-        // Decay (using gain envelope simulation or just shortening the sample)
-        // Simplified: we'll just use playbackRate for duration for now, 
-        // or we could add a GrainPlayer/Envelope if needed.
-        // For standard drum hits, pitch handles most of the feel.
+        this.params[drum] = { pitch, decay }
     }
 
     triggerDrum(drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', time: number, velocity: number = 0.8) {
-        this[drum].start(time)
+        const { pitch, decay } = this.params[drum]
+
+        // Micro-randomization
+        const pitchDrift = pitch + (Math.random() * 0.02 - 0.01)
+        const v = velocity * (0.9 + Math.random() * 0.2) // Velocity variance
+
+        if (this.currentKit === '808') {
+            switch (drum) {
+                case 'kick': this.kick808.trigger(time, v, pitchDrift, decay); break;
+                case 'snare': this.snare808.trigger(time, v, pitchDrift, decay); break;
+                case 'hihat': this.hihat808.trigger(time, v, pitchDrift, decay, false); break;
+                case 'hihatOpen': this.hihat808.trigger(time, v, pitchDrift, decay, true); break;
+                case 'clap': this.clap808.trigger(time, v, pitchDrift, decay); break;
+            }
+        } else {
+            switch (drum) {
+                case 'kick': this.kick909.trigger(time, v, pitchDrift, decay); break;
+                case 'snare': this.snare909.trigger(time, v, pitchDrift, decay); break;
+                case 'hihat': this.hihat808.trigger(time, v, pitchDrift, decay, false); break;
+                case 'hihatOpen': this.hihat808.trigger(time, v, pitchDrift, decay, true); break;
+                case 'clap': this.clap808.trigger(time, v, pitchDrift, decay); break;
+            }
+        }
     }
 }

@@ -14,32 +14,26 @@ export class TR909Kick {
     }
 
     trigger(time: number, pitch: number, decay: number) {
-        // pitch: 0.5 -> 50Hz, maps to 45-65Hz
-        const tune = 45 + pitch * 20;
-        // decay: 0.5 -> 0.45s, maps to 0.2-0.7s
-        const decayTime = 0.2 + decay * 0.5;
+        // pitch: 0.5 -> 50Hz, maps to 45-55Hz
+        const tune = 45 + pitch * 10;
+        // decay: 0.5 -> 0.45s, maps to 0.3-0.6s
+        const decayTime = 0.3 + decay * 0.3;
 
-        // 909 Kick Core: Triangle + Soft Clipper
-        const bodyOsc = new Tone.Oscillator(230, "triangle");
-
-        // Custom Soft Clipper WaveShaper
-        const clipper = new Tone.WaveShaper((val) => {
-            // Hyperbolic tangent (tanh) soft clipping
-            return Math.tanh(val * 1.5);
-        });
-
+        // 909 Kick Core: Triangle Oscillator Body
+        const bodyOsc = new Tone.Oscillator(tune, "triangle");
         const bodyGain = new Tone.Gain(0);
 
-        bodyOsc.connect(clipper);
-        clipper.connect(bodyGain);
+        bodyOsc.connect(bodyGain);
         bodyGain.connect(this.destination);
 
-        // Aggressive Pitch Envelope: High start -> punch
-        const startFreq = 230 + (pitch * 50); // Start high for the punch
+        // Pitch Envelope: Start high (tune * 4.7) and sweep down
+        const startFreq = tune * 4.7;
         const endFreq = tune;
 
         bodyOsc.frequency.setValueAtTime(startFreq, time);
-        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.04); // Fast 40ms drop
+        // Pitch decay range: 0.05 - 0.15s
+        const pitchDecay = 0.05 + pitch * 0.1;
+        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + pitchDecay);
 
         // VCA Envelope
         bodyGain.gain.setValueAtTime(1, time);
@@ -47,7 +41,7 @@ export class TR909Kick {
 
         // Click Layer (Noise)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const noiseFilter = new Tone.Filter(1000, "highpass"); // HPF > 1kHz
+        const noiseFilter = new Tone.Filter(1000 + pitch * 1000, "highpass"); // HPF 1-2kHz
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(noiseFilter);
@@ -55,8 +49,8 @@ export class TR909Kick {
         noiseGain.connect(this.destination);
 
         // Ultra short envelope (10-20ms)
-        const clickDecay = 0.015;
-        noiseGain.gain.setValueAtTime(0.8, time);
+        const clickDecay = 0.01 + Math.random() * 0.01;
+        noiseGain.gain.setValueAtTime(0.7, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 
         bodyOsc.start(time).stop(time + decayTime);
@@ -64,7 +58,6 @@ export class TR909Kick {
 
         bodyOsc.onstop = () => {
             bodyOsc.dispose();
-            clipper.dispose();
             bodyGain.dispose();
         };
         noiseSrc.onended = () => {

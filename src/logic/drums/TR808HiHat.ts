@@ -3,7 +3,7 @@ import * as Tone from 'tone'
 export class TR808HiHat {
     private frequencies = [205.3, 304.4, 369.6, 522.7, 800, 540];
 
-    constructor(private destination: Tone.ToneAudioNode) {}
+    constructor(private destination: Tone.ToneAudioNode) { }
 
     trigger(time: number, isOpen: boolean, pitch: number, decay: number) {
         const mixGain = new Tone.Gain(0.15);
@@ -15,13 +15,13 @@ export class TR808HiHat {
             return osc;
         });
 
-        const bpf1 = new Tone.Filter(3440, "bandpass");
+        const bpf1 = new Tone.Filter(3500, "bandpass"); // 3.5kHz
         bpf1.Q.value = 1.5;
-        const bpf2 = new Tone.Filter(7100, "bandpass");
+        const bpf2 = new Tone.Filter(7000, "bandpass"); // 7kHz
         bpf2.Q.value = 1.5;
 
         const envGain = new Tone.Gain(0);
-        const hpf = new Tone.Filter(7000, "highpass");
+        const hpf = new Tone.Filter(7000, "highpass"); // 7kHz high-pass cleanup
 
         mixGain.connect(bpf1);
         mixGain.connect(bpf2);

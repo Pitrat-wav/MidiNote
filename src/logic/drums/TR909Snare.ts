@@ -8,7 +8,13 @@ export class TR909Snare {
         const bufferSize = sampleRate * 0.5;
         this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        // Emulate 6-bit LFSR pseudo-random noise
+        let lfsr = 0x3F; // 6 bits
+        for (let i = 0; i < data.length; i++) {
+            const bit = ((lfsr >> 0) ^ (lfsr >> 1)) & 1;
+            lfsr = (lfsr >> 1) | (bit << 5);
+            data[i] = (bit * 2) - 1;
+        }
     }
 
     trigger(time: number, pitch: number, snappy: number) {
@@ -24,10 +30,10 @@ export class TR909Snare {
         osc2.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        osc1.frequency.setValueAtTime(freq1 * 2, time);
-        osc1.frequency.exponentialRampToValueAtTime(freq1, time + 0.05);
-        osc2.frequency.setValueAtTime(freq2 * 2, time);
-        osc2.frequency.exponentialRampToValueAtTime(freq2, time + 0.05);
+        osc1.frequency.setValueAtTime(freq1 * 1.5, time);
+        osc1.frequency.exponentialRampToValueAtTime(freq1, time + 0.03);
+        osc2.frequency.setValueAtTime(freq2 * 1.5, time);
+        osc2.frequency.exponentialRampToValueAtTime(freq2, time + 0.03);
 
         tonalGain.gain.setValueAtTime(1, time);
         tonalGain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);

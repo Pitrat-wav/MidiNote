@@ -8,7 +8,7 @@ import { useHarmonyStore, usePadStore } from '../store/instrumentStore'
 import { generatePadProgression } from '../logic/PadGenerator'
 
 export function SequencerLoop() {
-    const { acidSynth, drumMachine, padSynth, isInitialized } = useAudioStore()
+    const { bassSynth, leadSynth, drumMachine, padSynth, isInitialized } = useAudioStore()
     const drums = useDrumStore()
     const bass = useBassStore()
     const seq = useSequencerStore()
@@ -41,7 +41,7 @@ export function SequencerLoop() {
     }, [])
 
     useEffect(() => {
-        if (!isInitialized || !acidSynth || !drumMachine) return
+        if (!isInitialized || !bassSynth || !leadSynth || !drumMachine) return
 
         const loop = new Tone.Loop((time) => {
             const step = stepRef.current % 16
@@ -66,7 +66,9 @@ export function SequencerLoop() {
             const prevBassStep = currentBass.pattern[(step + 15) % 16]
             if (bassStep && bassStep.active) {
                 const isContinuing = prevBassStep.active && prevBassStep.slide
-                acidSynth.triggerNote(bassStep.note, '16n', time, bassStep.velocity, bassStep.slide, bassStep.accent, isContinuing)
+                if (bassSynth) {
+                    bassSynth.triggerNote(bassStep.note, '16n', time, bassStep.velocity, bassStep.slide, bassStep.accent, isContinuing)
+                }
             }
 
             // 3. Sequencer (ML-185 + Snake Grid)
@@ -75,9 +77,9 @@ export function SequencerLoop() {
             // Helper to trigger note and optionally advance snake
             const triggerStep = (duration: string, velocity: number, advanceSnake: boolean) => {
                 const shouldPlay = Math.random() < stage.probability
-                if (shouldPlay && acidSynth) {
+                if (shouldPlay && leadSynth) {
                     const note = currentSeq.snakeGrid[currentSeq.currentSnakeIndex]
-                    acidSynth.triggerNote(Tone.Frequency(note, 'midi').toNote(), duration, time, velocity)
+                    leadSynth.triggerNote(Tone.Frequency(note, 'midi').toNote(), duration, time, velocity)
 
                     if (advanceSnake) {
                         const nextSnake = GridWalker.getNextIndex(currentSeq.currentSnakeIndex, currentSeq.snakePattern)
@@ -132,7 +134,7 @@ export function SequencerLoop() {
         return () => {
             loop.dispose()
         }
-    }, [isInitialized, acidSynth, drumMachine])
+    }, [isInitialized, bassSynth, leadSynth, drumMachine])
 
     return null // This is a logic-only component
 }

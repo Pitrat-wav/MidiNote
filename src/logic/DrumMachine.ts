@@ -9,7 +9,10 @@ import { TR808Clap } from './drums/TR808Clap'
 export class DrumMachine {
     comp: Tone.Compressor
     shaper: Tone.WaveShaper
-    output: Tone.Gain
+    output: Tone.Gain // Optional master output
+    outputKick: Tone.Gain
+    outputSnare: Tone.Gain
+    outputHihat: Tone.Gain
     currentKit: '808' | '909' = '808'
 
     private kit808: {
@@ -37,21 +40,31 @@ export class DrumMachine {
         this.comp = new Tone.Compressor(-24, 4)
         this.shaper = new Tone.WaveShaper(this.makeDistortionCurve(15))
         this.output = new Tone.Gain(1)
+        this.outputKick = new Tone.Gain(1)
+        this.outputSnare = new Tone.Gain(1)
+        this.outputHihat = new Tone.Gain(1)
 
         this.comp.chain(this.shaper, this.output, Tone.Destination)
 
+        // Let's bypass compression for individual drum channels for now, 
+        // to simplify routing and allow strict analog synth modeling.
+        // We'll route them directly to destination or output
+        this.outputKick.connect(Tone.Destination)
+        this.outputSnare.connect(Tone.Destination)
+        this.outputHihat.connect(Tone.Destination)
+
         this.kit808 = {
-            kick: new TR808Kick(this.comp),
-            snare: new TR808Snare(this.comp),
-            hihat: new TR808HiHat(this.comp),
-            clap: new TR808Clap(this.comp)
+            kick: new TR808Kick(this.outputKick),
+            snare: new TR808Snare(this.outputSnare),
+            hihat: new TR808HiHat(this.outputHihat),
+            clap: new TR808Clap(this.outputSnare) // Route clap to snare channel
         }
 
         this.kit909 = {
-            kick: new TR909Kick(this.comp),
-            snare: new TR909Snare(this.comp),
-            hihat: new TR808HiHat(this.comp),
-            clap: new TR808Clap(this.comp)
+            kick: new TR909Kick(this.outputKick),
+            snare: new TR909Snare(this.outputSnare),
+            hihat: new TR808HiHat(this.outputHihat), // Shared hihat synthesis for now
+            clap: new TR808Clap(this.outputSnare)
         }
     }
 

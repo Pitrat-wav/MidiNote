@@ -19,35 +19,52 @@ export class TR909Kick {
         // decay: 0.5 -> 0.45s, maps to 0.2-0.7s
         const decayTime = 0.2 + decay * 0.5;
 
-        // Body Layer
-        const bodyOsc = new Tone.Oscillator(tune * 4.7, "triangle");
+        // 909 Kick Core: Triangle + Soft Clipper
+        const bodyOsc = new Tone.Oscillator(230, "triangle");
+
+        // Custom Soft Clipper WaveShaper
+        const clipper = new Tone.WaveShaper((val) => {
+            // Hyperbolic tangent (tanh) soft clipping
+            return Math.tanh(val * 1.5);
+        });
+
         const bodyGain = new Tone.Gain(0);
-        bodyOsc.connect(bodyGain);
+
+        bodyOsc.connect(clipper);
+        clipper.connect(bodyGain);
         bodyGain.connect(this.destination);
 
-        bodyOsc.frequency.setValueAtTime(tune * 4.7, time);
-        bodyOsc.frequency.exponentialRampToValueAtTime(tune, time + 0.1);
+        // Aggressive Pitch Envelope: High start -> punch
+        const startFreq = 230 + (pitch * 50); // Start high for the punch
+        const endFreq = tune;
 
+        bodyOsc.frequency.setValueAtTime(startFreq, time);
+        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.04); // Fast 40ms drop
+
+        // VCA Envelope
         bodyGain.gain.setValueAtTime(1, time);
         bodyGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
-        // Click Layer
+        // Click Layer (Noise)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const noiseFilter = new Tone.Filter(2000, "highpass");
+        const noiseFilter = new Tone.Filter(1000, "highpass"); // HPF > 1kHz
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        noiseGain.gain.setValueAtTime(0.5, time);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+        // Ultra short envelope (10-20ms)
+        const clickDecay = 0.015;
+        noiseGain.gain.setValueAtTime(0.8, time);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 
         bodyOsc.start(time).stop(time + decayTime);
-        noiseSrc.start(time).stop(time + 0.02);
+        noiseSrc.start(time).stop(time + clickDecay);
 
         bodyOsc.onstop = () => {
             bodyOsc.dispose();
+            clipper.dispose();
             bodyGain.dispose();
         };
         noiseSrc.onended = () => {

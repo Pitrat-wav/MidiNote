@@ -71,12 +71,12 @@ export function BassView() {
 
                 <div style={{ marginTop: '24px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
                     <button
-                        onClick={() => useAudioStore.getState().acidSynth?.setOscillatorType('sawtooth')}
+                        onClick={() => useAudioStore.getState().bassSynth?.setOscillatorType('sawtooth')}
                         className="card"
                         style={{ padding: '8px 16px', fontSize: '12px' }}
                     >Saw</button>
                     <button
-                        onClick={() => useAudioStore.getState().acidSynth?.setOscillatorType('square')}
+                        onClick={() => useAudioStore.getState().bassSynth?.setOscillatorType('square')}
                         className="card"
                         style={{ padding: '8px 16px', fontSize: '12px' }}
                     >Square</button>

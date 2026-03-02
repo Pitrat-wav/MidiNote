@@ -10,16 +10,24 @@ export interface AudioState {
     bpm: number
     swing: number
     currentStep: number
-    acidSynth: AcidSynth | null
+    bassSynth: AcidSynth | null
+    leadSynth: AcidSynth | null
     drumMachine: DrumMachine | null
     padSynth: PadSynth | null
-    volumes: { acid: number, drums: number, pads: number }
+    volumes: {
+        bass: number,
+        lead: number,
+        kick: number,
+        snare: number,
+        hihat: number,
+        pads: number
+    }
     initialize: () => Promise<void>
     togglePlay: () => void
     setBpm: (bpm: number) => void
     setSwing: (swing: number) => void
     setCurrentStep: (step: number) => void
-    setVolume: (channel: 'acid' | 'drums' | 'pads', value: number) => void
+    setVolume: (channel: 'bass' | 'lead' | 'kick' | 'snare' | 'hihat' | 'pads', value: number) => void
 }
 
 export const useAudioStore = create<AudioState>((set, get) => ({
@@ -28,10 +36,11 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     bpm: 128,
     swing: 0,
     currentStep: 0,
-    acidSynth: null,
+    bassSynth: null,
+    leadSynth: null,
     drumMachine: null,
     padSynth: null,
-    volumes: { acid: 0.8, drums: 0.8, pads: 0.5 },
+    volumes: { bass: 0.8, lead: 0.8, kick: 0.8, snare: 0.8, hihat: 0.8, pads: 0.5 },
 
     initialize: async () => {
         if (get().isInitialized) return
@@ -43,7 +52,8 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/wD/'
         silentAudio.play().catch(e => console.warn('Silent play failed', e))
 
-        const acid = new AcidSynth()
+        const bassSynth = new AcidSynth()
+        const leadSynth = new AcidSynth()
         const drums = new DrumMachine()
         const pads = new PadSynth()
 
@@ -52,7 +62,8 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
         set({
             isInitialized: true,
-            acidSynth: acid,
+            bassSynth: bassSynth,
+            leadSynth: leadSynth,
             drumMachine: drums,
             padSynth: pads
         })
@@ -72,9 +83,16 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
     setVolume: (channel, value) => {
         set((state) => ({ volumes: { ...state.volumes, [channel]: value } }))
-        const { acidSynth, drumMachine, padSynth } = get()
-        if (channel === 'acid' && acidSynth) acidSynth.synth.volume.value = Tone.gainToDb(value)
-        if (channel === 'drums' && drumMachine) drumMachine.output.gain.value = value
+        const { bassSynth, leadSynth, drumMachine, padSynth } = get()
+        if (channel === 'bass' && bassSynth) bassSynth.synth.volume.value = Tone.gainToDb(value)
+        if (channel === 'lead' && leadSynth) leadSynth.synth.volume.value = Tone.gainToDb(value)
+
+        if (drumMachine) {
+            if (channel === 'kick') drumMachine.outputKick.gain.value = value
+            if (channel === 'snare') drumMachine.outputSnare.gain.value = value
+            if (channel === 'hihat') drumMachine.outputHihat.gain.value = value
+        }
+
         if (channel === 'pads' && padSynth) padSynth.synth.volume.value = Tone.gainToDb(value)
     },
 

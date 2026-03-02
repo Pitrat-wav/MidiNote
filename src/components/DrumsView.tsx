@@ -5,10 +5,11 @@ import { generateBassPattern } from '../logic/StingGenerator'
 import { Dices } from 'lucide-react'
 import { useAudioStore, AudioState } from '../store/audioStore'
 import { bjorklund } from '../logic/bjorklund'
+import { TransportControls } from './TransportControls'
 
 export function DrumsView() {
     const { kick, snare, hihat, hihatOpen, clap, kit, setParams, setKit } = useDrumStore()
-    const { drumMachine } = useAudioStore()
+    const { drumMachine, volumes, setVolume } = useAudioStore()
 
     const updateDrum = (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', params: any) => {
         setParams(drum, params)
@@ -26,9 +27,11 @@ export function DrumsView() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <TransportControls title="Драм-машина" />
+
             <section className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3>Драм-машина</h3>
+                    <h3 style={{ margin: 0 }}>Настройки</h3>
                     <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '8px' }}>
                         {(['808', '909'] as const).map(k => (
                             <button
@@ -76,6 +79,13 @@ export function DrumsView() {
                                 value={useDrumStore((state) => state[d.id].decay)}
                                 min={0} max={1} step={0.01}
                                 onChange={(v) => updateDrum(d.id, { decay: v })}
+                                size={40}
+                            />
+                            <Knob
+                                label="Vol"
+                                value={volumes[d.id]}
+                                min={0} max={1} step={0.01}
+                                onChange={(v) => setVolume(d.id, v)}
                                 size={40}
                             />
                         </div>

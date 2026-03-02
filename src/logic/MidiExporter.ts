@@ -97,64 +97,75 @@ export function exportToMidi(
 
     while (pulsesUsed < totalPulses) {
         const stage = stages[stageIdx % stages.length]
-        const stageDuration = stage.length * stage.pulseCount
 
-        for (let p = 0; p < stageDuration; p++) {
-            if (pulsesUsed >= totalPulses) break
-
-            const midiNote = snakeGrid[currentSnakeIdx]
-            const noteName = Tone.Frequency(midiNote, 'midi').toNote()
-
-            let played = false
-            if (p === 0) { // Start of stage
-                if (stage.gateMode === 1 || stage.gateMode === 2) { // Single or Multi
-                    const shouldPlay = Math.random() < stage.probability
-                    if (shouldPlay) {
-                        track3.addEvent(new MidiWriter.NoteEvent({
-                            pitch: [noteName] as any,
-                            duration: ('t' + (stage.gateMode === 2 ? TICKS_PER_16TH : (stage.length * TICKS_PER_16TH))) as any,
-                            velocity: Math.floor(stage.velocity * 127),
-                            sequential: true
-                        }))
-                        played = true
-                        currentSnakeIdx = GridWalker.getNextIndex(currentSnakeIdx, snakePattern)
-                    }
-                } else if (stage.gateMode === 3) { // Hold
-                    track3.addEvent(new MidiWriter.NoteEvent({
-                        pitch: [noteName] as any,
-                        duration: ('t' + (stageDuration * TICKS_PER_16TH)) as any,
-                        velocity: Math.floor(stage.velocity * 127),
-                        sequential: true
-                    }))
-                    played = true
-                    // In Hold mode, we consume all pulses of the stage
-                    pulsesUsed += stageDuration
-                    p = stageDuration // exit inner loop
-                    continue
-                }
-            } else if (stage.gateMode === 2 && (p % stage.length === 0)) { // Multi-pulse
-                const shouldPlay = Math.random() < stage.probability
-                if (shouldPlay) {
-                    track3.addEvent(new MidiWriter.NoteEvent({
-                        pitch: [noteName] as any,
-                        duration: ('t' + TICKS_PER_16TH) as any,
-                        velocity: Math.floor(stage.velocity * 127 * 0.8),
-                        sequential: true
-                    }))
-                    played = true
-                    currentSnakeIdx = GridWalker.getNextIndex(currentSnakeIdx, snakePattern)
-                }
-            }
-
-            if (!played) {
+        if (stage.gateMode === 0) { // Mute
+            track3.addEvent(new MidiWriter.NoteEvent({
+                pitch: [],
+                duration: ('t' + (stage.length * stage.pulseCount * TICKS_PER_16TH)) as any,
+                sequential: true
+            }))
+            pulsesUsed += stage.length * stage.pulseCount
+        } else if (stage.gateMode === 1) { // Single
+            const shouldPlay = Math.random() < stage.probability
+            const noteName = Tone.Frequency(snakeGrid[currentSnakeIdx], 'midi').toNote()
+            if (shouldPlay) {
+                track3.addEvent(new MidiWriter.NoteEvent({
+                    pitch: [noteName] as any,
+                    duration: ('t' + (stage.length * TICKS_PER_16TH)) as any,
+                    velocity: Math.floor(stage.velocity * 127),
+                    sequential: true
+                }))
+                currentSnakeIdx = GridWalker.getNextIndex(currentSnakeIdx, snakePattern)
+            } else {
                 track3.addEvent(new MidiWriter.NoteEvent({
                     pitch: [],
-                    duration: ('t' + TICKS_PER_16TH) as any,
+                    duration: ('t' + (stage.length * TICKS_PER_16TH)) as any,
                     sequential: true
                 }))
             }
-            pulsesUsed++
+            const remainingPulses = stage.length * (stage.pulseCount - 1)
+            if (remainingPulses > 0) {
+                track3.addEvent(new MidiWriter.NoteEvent({
+                    pitch: [],
+                    duration: ('t' + (remainingPulses * TICKS_PER_16TH)) as any,
+                    sequential: true
+                }))
+            }
+            pulsesUsed += stage.length * stage.pulseCount
+        } else if (stage.gateMode === 3) { // Hold
+            const noteName = Tone.Frequency(snakeGrid[currentSnakeIdx], 'midi').toNote()
+            const totalStageLength = stage.length * stage.pulseCount
+            track3.addEvent(new MidiWriter.NoteEvent({
+                pitch: [noteName] as any,
+                duration: ('t' + (totalStageLength * TICKS_PER_16TH)) as any,
+                velocity: Math.floor(stage.velocity * 127),
+                sequential: true
+            }))
+            pulsesUsed += totalStageLength
+        } else if (stage.gateMode === 2) { // Multi
+            for (let i = 0; i < stage.pulseCount; i++) {
+                const shouldPlay = Math.random() < stage.probability
+                const noteName = Tone.Frequency(snakeGrid[currentSnakeIdx], 'midi').toNote()
+                if (shouldPlay) {
+                    track3.addEvent(new MidiWriter.NoteEvent({
+                        pitch: [noteName] as any,
+                        duration: ('t' + (stage.length * TICKS_PER_16TH)) as any,
+                        velocity: Math.floor(stage.velocity * 127 * (i === 0 ? 1 : 0.8)),
+                        sequential: true
+                    }))
+                    currentSnakeIdx = GridWalker.getNextIndex(currentSnakeIdx, snakePattern)
+                } else {
+                    track3.addEvent(new MidiWriter.NoteEvent({
+                        pitch: [],
+                        duration: ('t' + (stage.length * TICKS_PER_16TH)) as any,
+                        sequential: true
+                    }))
+                }
+                pulsesUsed += stage.length
+                if (pulsesUsed >= totalPulses) break
+            }
         }
+
         stageIdx++
     }
 

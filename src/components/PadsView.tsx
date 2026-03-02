@@ -1,6 +1,7 @@
 import { usePadStore } from '../store/instrumentStore'
 import { Knob } from './Knob'
 import { useAudioStore } from '../store/audioStore'
+import { TransportControls } from './TransportControls'
 
 export function PadsView() {
     const { active, brightness, complexity, setParams } = usePadStore()
@@ -13,9 +14,10 @@ export function PadsView() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <TransportControls title="Эмбиент Пэды" channel="pads" />
             <section className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3>Эмбиент Пэды</h3>
+                    <h3 style={{ margin: 0 }}>Настройки Пэдов</h3>
                     <button
                         onClick={() => setParams({ active: !active })}
                         style={{

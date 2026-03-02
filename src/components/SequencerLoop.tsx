@@ -8,7 +8,7 @@ import { useHarmonyStore, usePadStore } from '../store/instrumentStore'
 import { generatePadProgression } from '../logic/PadGenerator'
 
 export function SequencerLoop() {
-    const { bassSynth, leadSynth, drumMachine, padSynth, isInitialized } = useAudioStore()
+    const { isPlaying, bassSynth, leadSynth, drumMachine, padSynth, isInitialized } = useAudioStore()
     const drums = useDrumStore()
     const bass = useBassStore()
     const seq = useSequencerStore()
@@ -23,6 +23,16 @@ export function SequencerLoop() {
     const drumPatternsRef = useRef<Record<string, number[]>>({
         kick: [], snare: [], hihat: [], hihatOpen: [], clap: []
     })
+
+    useEffect(() => {
+        if (isPlaying) {
+            stepRef.current = 0
+            stagePulseRef.current = 0
+            useSequencerStore.getState().setCurrentStageIndex(0)
+            useSequencerStore.getState().setCurrentSnakeIndex(0)
+            useAudioStore.getState().setCurrentStep(0)
+        }
+    }, [isPlaying])
 
     useEffect(() => {
         const updatePatterns = () => {

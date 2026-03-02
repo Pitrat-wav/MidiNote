@@ -64,22 +64,32 @@ interface BassState {
     density: number
     type: number
     seed: number
+    cutoff: number
+    resonance: number
+    envMod: number
+    decay: number
     pattern: BassStep[]
     setDensity: (d: number) => void
     setType: (t: number) => void
     setSeed: (s: number) => void
     setPattern: (p: BassStep[]) => void
+    setParams: (params: Partial<{ cutoff: number, resonance: number, envMod: number, decay: number }>) => void
 }
 
 export const useBassStore = create<BassState>((set) => ({
     density: 0.5,
     type: 0.2,
     seed: Math.random(),
+    cutoff: 400,
+    resonance: 2,
+    envMod: 4,
+    decay: 0.2,
     pattern: [],
     setDensity: (density) => set({ density }),
     setType: (type) => set({ type }),
     setSeed: (seed) => set({ seed }),
-    setPattern: (pattern) => set({ pattern })
+    setPattern: (pattern) => set({ pattern }),
+    setParams: (params) => set((state) => ({ ...state, ...params }))
 }))
 
 // Sequencer Store (ML-185 + Snake)

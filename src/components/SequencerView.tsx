@@ -4,6 +4,7 @@ import * as Tone from 'tone'
 import { useAudioStore } from '../store/audioStore'
 import { useEffect } from 'react'
 import { Scale, Note } from '@tonaljs/tonal'
+import { TransportControls } from './TransportControls'
 
 const GATE_MODES = ['Mute', 'Single', 'Multi', 'Hold']
 
@@ -28,8 +29,9 @@ export function SequencerView() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <TransportControls title="Секвенсор ML-185" channel="lead" />
             <section className="card">
-                <h3>Секвенсор ML-185</h3>
+                <h3 style={{ margin: 0 }}>Паттерн</h3>
                 <p style={{ fontSize: '12px', color: 'var(--tg-theme-hint-color)' }}>
                     Настройка 8 стадий ритма
                 </p>

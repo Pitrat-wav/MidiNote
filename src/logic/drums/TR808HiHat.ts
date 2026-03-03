@@ -15,9 +15,9 @@ export class TR808HiHat {
             return osc;
         });
 
-        const bpf1 = new Tone.Filter(3500, "bandpass"); // 3.5kHz
+        const bpf1 = new Tone.Filter(3440, "bandpass"); // 3440Hz
         bpf1.Q.value = 1.5;
-        const bpf2 = new Tone.Filter(7000, "bandpass"); // 7kHz
+        const bpf2 = new Tone.Filter(7100, "bandpass"); // 7100Hz
         bpf2.Q.value = 1.5;
 
         const envGain = new Tone.Gain(0);

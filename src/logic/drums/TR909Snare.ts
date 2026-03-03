@@ -19,8 +19,8 @@ export class TR909Snare {
 
     trigger(time: number, pitch: number, snappy: number) {
         // Tonal Body (2 triangle oscillators)
-        const freq1 = 160 + pitch * 40;
-        const freq2 = 220 + pitch * 50;
+        const freq1 = 160;
+        const freq2 = 220; // Dissonance for imitating plastic modes
 
         const osc1 = new Tone.Oscillator(freq1 * 2, "triangle");
         const osc2 = new Tone.Oscillator(freq2 * 2, "triangle");
@@ -30,10 +30,10 @@ export class TR909Snare {
         osc2.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        osc1.frequency.setValueAtTime(freq1 * 1.5, time);
-        osc1.frequency.exponentialRampToValueAtTime(freq1, time + 0.03);
-        osc2.frequency.setValueAtTime(freq2 * 1.5, time);
-        osc2.frequency.exponentialRampToValueAtTime(freq2, time + 0.03);
+        osc1.frequency.setValueAtTime(freq1 * 2, time); // Pitch sweep
+        osc1.frequency.exponentialRampToValueAtTime(freq1, time + 0.05);
+        osc2.frequency.setValueAtTime(freq2 * 2, time);
+        osc2.frequency.exponentialRampToValueAtTime(freq2, time + 0.05);
 
         tonalGain.gain.setValueAtTime(1, time);
         tonalGain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
@@ -41,7 +41,7 @@ export class TR909Snare {
         // Snappy Layer (LFSR-like noise with LPF/HPF)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
         const hpf = new Tone.Filter(1000, "highpass");
-        const lpf = new Tone.Filter(4000 + pitch * 4000, "lowpass"); // pitch controls tone cutoff
+        const lpf = new Tone.Filter(4000 + (1 - pitch) * 4000, "lowpass"); // pitch (Tone) controls LPF cutoff
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(hpf);

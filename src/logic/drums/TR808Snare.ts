@@ -17,9 +17,9 @@ export class TR808Snare {
         // pitch maps to tone balance here (balance between low and high modes)
         const toneBalance = pitch;
 
-        // 808 Membrane modes: ~180Hz and ~330Hz
-        const oscLow = new Tone.Oscillator(180 + (pitch * 50), "sine");
-        const oscHigh = new Tone.Oscillator(330 + (pitch * 80), "sine");
+        // 808 Membrane modes: 238Hz and 476Hz (Resonant modes of Bridged-T)
+        const oscLow = new Tone.Oscillator(238, "sine");
+        const oscHigh = new Tone.Oscillator(476, "sine");
         const gainLow = new Tone.Gain(1 - toneBalance);
         const gainHigh = new Tone.Gain(toneBalance);
         const masterTonalGain = new Tone.Gain(0);
@@ -35,15 +35,15 @@ export class TR808Snare {
 
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        // Apply HPF (~2kHz) to noise to prevent phase cancellation with tonal oscillators
-        const noiseFilter = new Tone.Filter(2000, "highpass");
+        // Apply HPF (~1.8kHz) to noise to prevent phase cancellation with tonal oscillators
+        const noiseFilter = new Tone.Filter(1800, "highpass");
         const snappyGain = new Tone.Gain(0);
 
         noiseSrc.connect(noiseFilter);
         noiseFilter.connect(snappyGain);
         snappyGain.connect(this.destination);
 
-        const snappyDecay = 0.1 + snappy * 0.4; // 0.1s to 0.5s
+        const snappyDecay = 0.25 + snappy * 0.15; // 0.25s to 0.4s
 
         snappyGain.gain.setValueAtTime(0.8, time);
         snappyGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);

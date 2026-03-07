@@ -4,57 +4,44 @@ export class TR808Kick {
     constructor(private destination: Tone.ToneAudioNode) { }
 
     trigger(time: number, pitch: number, decay: number) {
-        // pitch: 0.5 -> 50Hz, maps to 40-80Hz range
-        const tune = 40 + pitch * 40;
-        // decay: 0.5 -> 1.5s, maps to 0.1-3.0s range
-        const decayTime = 0.1 + decay * 2.9;
+        // Research: Base frequency (Tune) 45 Hz – 60 Hz
+        const tune = 45 + pitch * 15;
+        // Research: Amplitude Decay 0.4 sec – 3.0 sec
+        const decayTime = 0.4 + decay * 2.6;
 
-        // 808 Kick Core: Bridged-T Network emulation
+        // 808 Kick Core: Bridged-T Network emulation (Sine wave)
         const osc = new Tone.Oscillator(tune, "sine");
-        osc.phase = Math.random() * 360; // Analog phase randomization
+
+        // Analog drift: phase randomization
+        osc.phase = Math.random() * 360;
+
         const masterGain = new Tone.Gain(0);
 
         osc.connect(masterGain);
         masterGain.connect(this.destination);
 
-        // Micro-randomization: Pitch Drift
+        // Micro-randomization: Pitch Drift (+/- 1-2 cents)
         const drift = (Math.random() * 2 - 1) * 0.5;
+        const baseFreq = tune + drift;
 
-        // Pitch Envelope: Start high (~150Hz) and drop quickly to simulate the membrane hit
-        const startFreq = 150 + drift;
-        const endFreq = tune + drift;
-        const pitchDropTime = 0.05; // 50ms drop
+        // Pitch Envelope: Imitation of diode frequency shift.
+        // Research: Start at Tune * 2.5, drop to Tune over 50ms (0.05s)
+        const startFreq = baseFreq * 2.5;
 
         osc.frequency.setValueAtTime(startFreq, time);
-        osc.frequency.exponentialRampToValueAtTime(endFreq, time + pitchDropTime);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq, time + 0.05);
 
-        // VCA Amp Envelope: Instant attack, adjustable decay
+        // VCA Amp Envelope: Exponential Decay
+        // Target 0.001 to avoid math errors with exponentialRamp
         masterGain.gain.setValueAtTime(1, time);
         masterGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
-        // Attack Click: Dirac impulse / very fast transient generator
-        const clickOsc = new Tone.Oscillator(startFreq * 2, "sine");
-        const clickGain = new Tone.Gain(0);
-        clickOsc.connect(clickGain);
-        clickGain.connect(this.destination);
-
-        clickOsc.frequency.setValueAtTime(startFreq * 2, time);
-        clickOsc.frequency.exponentialRampToValueAtTime(10, time + 0.02);
-
-        clickGain.gain.setValueAtTime(0.5, time);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.01);
-
+        // Lifecycle management
         osc.start(time).stop(time + decayTime);
-        clickOsc.start(time).stop(time + 0.02);
 
         osc.onstop = () => {
             osc.dispose();
             masterGain.dispose();
-        };
-
-        clickOsc.onstop = () => {
-            clickOsc.dispose();
-            clickGain.dispose();
         };
     }
 }

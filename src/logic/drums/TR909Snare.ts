@@ -8,40 +8,43 @@ export class TR909Snare {
         const bufferSize = sampleRate * 0.5;
         this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
-        // Emulate 6-bit LFSR pseudo-random noise
-        let lfsr = 0x3F; // 6 bits
+        // Emulate white noise for the snappy component
         for (let i = 0; i < data.length; i++) {
-            const bit = ((lfsr >> 0) ^ (lfsr >> 1)) & 1;
-            lfsr = (lfsr >> 1) | (bit << 5);
-            data[i] = (bit * 2) - 1;
+            data[i] = Math.random() * 2 - 1;
         }
     }
 
     trigger(time: number, pitch: number, snappy: number) {
-        // Tonal Body (2 triangle oscillators)
-        const freq1 = 160 + pitch * 40;
-        const freq2 = 220 + pitch * 50;
+        // Research: Tonal frequencies ~160Hz and ~220Hz
+        const freq1 = 160;
+        const freq2 = 220;
 
-        const osc1 = new Tone.Oscillator(freq1 * 2, "triangle");
-        const osc2 = new Tone.Oscillator(freq2 * 2, "triangle");
+        const osc1 = new Tone.Oscillator(freq1, "triangle");
+        const osc2 = new Tone.Oscillator(freq2, "triangle");
         const tonalGain = new Tone.Gain(0);
 
         osc1.connect(tonalGain);
         osc2.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        osc1.frequency.setValueAtTime(freq1 * 1.5, time);
-        osc1.frequency.exponentialRampToValueAtTime(freq1, time + 0.03);
-        osc2.frequency.setValueAtTime(freq2 * 1.5, time);
-        osc2.frequency.exponentialRampToValueAtTime(freq2, time + 0.03);
+        // Research: Pitch Envelope (start at 2x base freq, 50ms drop)
+        osc1.frequency.setValueAtTime(freq1 * 2, time);
+        osc1.frequency.exponentialRampToValueAtTime(freq1, time + 0.05);
+        osc2.frequency.setValueAtTime(freq2 * 2, time);
+        osc2.frequency.exponentialRampToValueAtTime(freq2, time + 0.05);
 
+        // Research: Tonal decay ~0.2s
+        const tonalDecay = 0.2;
         tonalGain.gain.setValueAtTime(1, time);
-        tonalGain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+        tonalGain.gain.exponentialRampToValueAtTime(0.001, time + tonalDecay);
 
-        // Snappy Layer (LFSR-like noise with LPF/HPF)
+        // Snappy Layer (Noise with LPF/HPF)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
+        // Research: HPF ~1000Hz
         const hpf = new Tone.Filter(1000, "highpass");
-        const lpf = new Tone.Filter(4000 + pitch * 4000, "lowpass"); // pitch controls tone cutoff
+        // Research: LPF (Tone control) ~4000Hz - 8000Hz
+        const lpfFreq = 4000 + pitch * 4000;
+        const lpf = new Tone.Filter(lpfFreq, "lowpass");
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(hpf);
@@ -49,13 +52,14 @@ export class TR909Snare {
         lpf.connect(noiseGain);
         noiseGain.connect(this.destination);
 
+        // Research: Snappy Decay ~0.3s (default)
         const snappyDecay = 0.1 + snappy * 0.4;
 
         noiseGain.gain.setValueAtTime(0.7, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
-        osc1.start(time).stop(time + 0.15);
-        osc2.start(time).stop(time + 0.15);
+        osc1.start(time).stop(time + tonalDecay);
+        osc2.start(time).stop(time + tonalDecay);
         noiseSrc.start(time).stop(time + snappyDecay);
 
         osc1.onstop = () => {

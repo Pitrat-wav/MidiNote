@@ -5,7 +5,8 @@ export class TR909Kick {
 
     constructor(private destination: Tone.ToneAudioNode) {
         const sampleRate = Tone.getContext().sampleRate;
-        const bufferSize = sampleRate * 0.05; // 50ms click
+        // Research: Click buffer size (50ms)
+        const bufferSize = sampleRate * 0.05;
         this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
@@ -14,32 +15,32 @@ export class TR909Kick {
     }
 
     trigger(time: number, pitch: number, decay: number) {
-        // pitch: 0.5 -> 50Hz, maps to 45-65Hz
-        const tune = 45 + pitch * 20;
-        // decay: 0.5 -> 0.45s, maps to 0.2-0.7s
-        const decayTime = 0.2 + decay * 0.5;
+        // Research: Base frequency (Tune) 45 Hz – 55 Hz
+        const tune = 45 + pitch * 10;
+        // Research: Amplitude Decay 0.3 sec – 0.6 sec
+        const decayTime = 0.3 + decay * 0.3;
 
-        // 909 Kick Core: Triangle + Soft Clipper
-        const bodyOsc = new Tone.Oscillator(230, "triangle");
+        // 909 Kick Core: Distorted Triangle wave
+        const bodyOsc = new Tone.Oscillator(tune, "triangle");
 
-        // Custom Soft Clipper WaveShaper
-        const clipper = new Tone.WaveShaper((val) => {
-            // Hyperbolic tangent (tanh) soft clipping
-            return Math.tanh(val * 1.5);
-        });
-
+        // Custom Soft Clipper for body (as described in 909 section)
+        const clipper = new Tone.WaveShaper((val) => Math.tanh(val * 1.5));
         const bodyGain = new Tone.Gain(0);
 
         bodyOsc.connect(clipper);
         clipper.connect(bodyGain);
         bodyGain.connect(this.destination);
 
-        // Aggressive Pitch Envelope: High start -> punch
-        const startFreq = 230 + (pitch * 50); // Start high for the punch
-        const endFreq = tune;
+        // Research: Pitch Envelope start is ~4.7x base freq
+        const startFreq = tune * 4.7;
 
-        bodyOsc.frequency.setValueAtTime(startFreq, time);
-        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.04); // Fast 40ms drop
+        // Analog drift: slight pitch variation
+        const drift = (Math.random() * 2 - 1) * 0.5;
+        const targetFreq = tune + drift;
+
+        bodyOsc.frequency.setValueAtTime(startFreq + drift, time);
+        // Research: Pitch Decay 0.05s - 0.15s. We'll use 0.1s as standard.
+        bodyOsc.frequency.exponentialRampToValueAtTime(targetFreq, time + 0.1);
 
         // VCA Envelope
         bodyGain.gain.setValueAtTime(1, time);
@@ -47,18 +48,20 @@ export class TR909Kick {
 
         // Click Layer (Noise)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const noiseFilter = new Tone.Filter(1000, "highpass"); // HPF > 1kHz
+        // Research: HPF ~1000-2000Hz (we'll use 1500Hz)
+        const noiseFilter = new Tone.Filter(1500, "highpass");
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        // Ultra short envelope (10-20ms)
-        const clickDecay = 0.015;
+        // Research: Click decay 10-20ms (0.02s)
+        const clickDecay = 0.02;
         noiseGain.gain.setValueAtTime(0.8, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 
+        // Lifecycle management
         bodyOsc.start(time).stop(time + decayTime);
         noiseSrc.start(time).stop(time + clickDecay);
 

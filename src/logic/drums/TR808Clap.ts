@@ -12,7 +12,10 @@ export class TR808Clap {
 
     trigger(time: number, pitch: number, decay: number) {
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const bpf = new Tone.Filter(1000 + pitch * 1000, "bandpass");
+
+        // Micro-randomization: filter cutoff drift
+        const cutoff = (1000 + pitch * 1000) * (1 + (Math.random() * 0.04 - 0.02));
+        const bpf = new Tone.Filter(cutoff, "bandpass");
         const gain = new Tone.Gain(0).connect(this.destination);
 
         noiseSrc.connect(bpf);
@@ -29,11 +32,14 @@ export class TR808Clap {
 
         // Final decay
         const finalDecayStart = time + snapCount * snapInterval;
-        const decayTime = 0.1 + decay * 0.5;
+        // Micro-randomization: decay drift
+        const baseDecay = 0.1 + decay * 0.5;
+        const decayTime = baseDecay * (1 + (Math.random() * 0.04 - 0.02));
+
         gain.gain.setValueAtTime(1, finalDecayStart);
         gain.gain.exponentialRampToValueAtTime(0.001, finalDecayStart + decayTime);
 
-        noiseSrc.start(time).stop(finalDecayStart + decayTime);
+        noiseSrc.start(time).stop(finalDecayStart + decayTime + 0.1);
 
         noiseSrc.onended = () => {
             noiseSrc.dispose();

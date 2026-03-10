@@ -8,6 +8,7 @@ export class TR808HiHat {
     trigger(time: number, isOpen: boolean, pitch: number, decay: number) {
         const mixGain = new Tone.Gain(0.15);
         const oscillators = this.frequencies.map(freq => {
+            // Research: Analog drift +/- 2Hz
             const drift = (Math.random() - 0.5) * 4;
             // Use pitch to shift all frequencies slightly
             const osc = new Tone.Oscillator(freq * (0.5 + pitch) + drift, "square");
@@ -15,13 +16,15 @@ export class TR808HiHat {
             return osc;
         });
 
-        const bpf1 = new Tone.Filter(3500, "bandpass"); // 3.5kHz
+        // Research: Two parallel Bandpass filters (3440Hz & 7100Hz)
+        const bpf1 = new Tone.Filter(3440 * (1 + (Math.random() * 0.04 - 0.02)), "bandpass");
         bpf1.Q.value = 1.5;
-        const bpf2 = new Tone.Filter(7000, "bandpass"); // 7kHz
+        const bpf2 = new Tone.Filter(7100 * (1 + (Math.random() * 0.04 - 0.02)), "bandpass");
         bpf2.Q.value = 1.5;
 
         const envGain = new Tone.Gain(0);
-        const hpf = new Tone.Filter(7000, "highpass"); // 7kHz high-pass cleanup
+        // Research: Final HPF at 7000Hz (Sizzle)
+        const hpf = new Tone.Filter(7000, "highpass");
 
         mixGain.connect(bpf1);
         mixGain.connect(bpf2);
@@ -30,8 +33,10 @@ export class TR808HiHat {
         envGain.connect(hpf);
         hpf.connect(this.destination);
 
-        // decay: 0.5 maps to standard 808 times
-        const decayTime = isOpen ? (0.2 + decay * 0.8) : (0.02 + decay * 0.1);
+        // Research: Closed Hat (0.05s) vs Open Hat (0.4s)
+        const baseDecay = isOpen ? 0.4 : 0.05;
+        // Apply user decay control (+/- 50% for flavor) and micro-randomization
+        const decayTime = baseDecay * (0.5 + decay) * (1 + (Math.random() * 0.04 - 0.02));
 
         envGain.gain.setValueAtTime(1, time);
         envGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
@@ -40,7 +45,8 @@ export class TR808HiHat {
             osc.start(time).stop(time + decayTime);
         });
 
-        // Disposal
+        // Disposal - use onended of the source as an anchor
+        // Since we have multiple oscillators, we'll use the first one as trigger
         oscillators[0].onstop = () => {
             oscillators.forEach(o => o.dispose());
             mixGain.dispose();

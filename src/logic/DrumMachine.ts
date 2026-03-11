@@ -40,7 +40,10 @@ export class DrumMachine {
 
     constructor() {
         this.comp = new Tone.Compressor(-24, 4)
+        // Research: Soft Clipping WaveShaper with tanh approximation
         this.shaper = new Tone.WaveShaper(this.makeDistortionCurve(15))
+        this.shaper.oversample = '4x'
+
         this.output = new Tone.Gain(1)
         this.outputKick = new Tone.Gain(1)
         this.outputSnare = new Tone.Gain(1)
@@ -48,16 +51,14 @@ export class DrumMachine {
         this.outputOpenHat = new Tone.Gain(1)
         this.outputClap = new Tone.Gain(1)
 
-        this.comp.chain(this.shaper, this.output, Tone.Destination)
+        // Route all individual outputs through master bus
+        this.outputKick.connect(this.comp)
+        this.outputSnare.connect(this.comp)
+        this.outputHihat.connect(this.comp)
+        this.outputOpenHat.connect(this.comp)
+        this.outputClap.connect(this.comp)
 
-        // Let's bypass compression for individual drum channels for now, 
-        // to simplify routing and allow strict analog synth modeling.
-        // We'll route them directly to destination or output
-        this.outputKick.connect(Tone.Destination)
-        this.outputSnare.connect(Tone.Destination)
-        this.outputHihat.connect(Tone.Destination)
-        this.outputOpenHat.connect(Tone.Destination)
-        this.outputClap.connect(Tone.Destination)
+        this.comp.chain(this.shaper, this.output, Tone.Destination)
 
         this.kit808 = {
             kick: new TR808Kick(this.outputKick),
@@ -81,6 +82,7 @@ export class DrumMachine {
         const deg = Math.PI / 180
         for (let i = 0; i < n_samples; ++i) {
             let x = i * 2 / n_samples - 1
+            // Research: Formula with soft clipping (approx. tanh)
             curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x))
         }
         return curve
@@ -99,28 +101,28 @@ export class DrumMachine {
         const kit808 = this.kit808
         const kit909 = this.kit909
 
+        // Micro-randomization for each hit (Analog Drift)
+        const pitchDrift = (Math.random() * 2 - 1) * 0.01 // Small pitch drift
+        const decayDrift = (Math.random() * 2 - 1) * 0.01 // Small decay drift
+
+        const finalPitch = Math.max(0, Math.min(1, p.pitch + pitchDrift))
+        const finalDecay = Math.max(0, Math.min(1, p.decay + decayDrift))
+
         if (this.currentKit === '808') {
             switch (drum) {
-                case 'kick': kit808.kick.trigger(time, p.pitch, p.decay); break
-                case 'snare': kit808.snare.trigger(time, p.pitch, p.decay); break
-                case 'hihat': kit808.hihat.trigger(time, false, p.pitch, p.decay); break
-                case 'hihatOpen': kit808.hihat.trigger(time, true, p.pitch, p.decay); break
-                case 'clap': kit808.clap.trigger(time, p.pitch, p.decay); break
+                case 'kick': kit808.kick.trigger(time, finalPitch, finalDecay); break
+                case 'snare': kit808.snare.trigger(time, finalPitch, finalDecay); break
+                case 'hihat': kit808.hihat.trigger(time, false, finalPitch, finalDecay); break
+                case 'hihatOpen': kit808.hihat.trigger(time, true, finalPitch, finalDecay); break
+                case 'clap': kit808.clap.trigger(time, finalPitch, finalDecay); break
             }
         } else {
             switch (drum) {
-                case 'kick': kit909.kick.trigger(time, p.pitch, p.decay); break
-                case 'snare': kit909.snare.trigger(time, p.pitch, p.decay); break
-                case 'hihat': kit909.hihat.trigger(time, false, p.pitch, p.decay); break
-                case 'hihatOpen':
-                    // Reuse hihat logic but specify it's open
-                    // Note: technically TR909 uses samples for open hats, but we'll use our analog emulation for now
-                    kit909.hihat.trigger(time, true, p.pitch, p.decay);
-                    // However, we need to route it to the right output if possible. Our TR808HiHat 
-                    // currently has one destination baked in at constructor. To mix them separately, 
-                    // we will need an architectural tweak or just use the same channel. Let's just trigger it.
-                    break
-                case 'clap': kit909.clap.trigger(time, p.pitch, p.decay); break
+                case 'kick': kit909.kick.trigger(time, finalPitch, finalDecay); break
+                case 'snare': kit909.snare.trigger(time, finalPitch, finalDecay); break
+                case 'hihat': kit909.hihat.trigger(time, false, finalPitch, finalDecay); break
+                case 'hihatOpen': kit909.hihat.trigger(time, true, finalPitch, finalDecay); break
+                case 'clap': kit909.clap.trigger(time, finalPitch, finalDecay); break
             }
         }
     }

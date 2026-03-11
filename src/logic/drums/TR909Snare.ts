@@ -18,9 +18,9 @@ export class TR909Snare {
     }
 
     trigger(time: number, pitch: number, snappy: number) {
-        // Tonal Body (2 triangle oscillators)
-        const freq1 = 160 + pitch * 40;
-        const freq2 = 220 + pitch * 50;
+        // Research: Tonal Body (2 triangle oscillators at ~160Hz and ~220Hz)
+        const freq1 = 160;
+        const freq2 = 220;
 
         const osc1 = new Tone.Oscillator(freq1 * 2, "triangle");
         const osc2 = new Tone.Oscillator(freq2 * 2, "triangle");
@@ -30,18 +30,23 @@ export class TR909Snare {
         osc2.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        osc1.frequency.setValueAtTime(freq1 * 1.5, time);
-        osc1.frequency.exponentialRampToValueAtTime(freq1, time + 0.03);
-        osc2.frequency.setValueAtTime(freq2 * 1.5, time);
-        osc2.frequency.exponentialRampToValueAtTime(freq2, time + 0.03);
+        // Research: Pitch sweep (start at 2x base freq)
+        osc1.frequency.setValueAtTime(freq1 * 2, time);
+        osc1.frequency.exponentialRampToValueAtTime(freq1, time + 0.05);
+        osc2.frequency.setValueAtTime(freq2 * 2, time);
+        osc2.frequency.exponentialRampToValueAtTime(freq2, time + 0.05);
 
+        // Research: Tonal decay ~0.2s
         tonalGain.gain.setValueAtTime(1, time);
-        tonalGain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+        tonalGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
 
         // Snappy Layer (LFSR-like noise with LPF/HPF)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
+        // Research: HPF ~1000Hz
         const hpf = new Tone.Filter(1000, "highpass");
-        const lpf = new Tone.Filter(4000 + pitch * 4000, "lowpass"); // pitch controls tone cutoff
+        // Research: LPF (Tone control) ~4000Hz - 8000Hz
+        const toneCutoff = 4000 + pitch * 4000;
+        const lpf = new Tone.Filter(toneCutoff, "lowpass");
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(hpf);
@@ -49,13 +54,14 @@ export class TR909Snare {
         lpf.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        const snappyDecay = 0.1 + snappy * 0.4;
+        // Research: Snappy decay 0.25s - 0.4s
+        const snappyDecay = 0.25 + snappy * 0.15;
 
         noiseGain.gain.setValueAtTime(0.7, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
-        osc1.start(time).stop(time + 0.15);
-        osc2.start(time).stop(time + 0.15);
+        osc1.start(time).stop(time + 0.2);
+        osc2.start(time).stop(time + 0.2);
         noiseSrc.start(time).stop(time + snappyDecay);
 
         osc1.onstop = () => {

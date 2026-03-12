@@ -4,12 +4,12 @@ export class TR808Kick {
     constructor(private destination: Tone.ToneAudioNode) { }
 
     trigger(time: number, pitch: number, decay: number) {
-        // pitch: 0.5 -> 50Hz, maps to 40-80Hz range
-        const tune = 40 + pitch * 40;
-        // decay: 0.5 -> 1.5s, maps to 0.1-3.0s range
-        const decayTime = 0.1 + decay * 2.9;
+        // pitch: 0.5 -> 52.5Hz, maps to 45-60Hz range
+        const tune = 45 + pitch * 15;
+        // decay: 0.5 -> 1.7s, maps to 0.4-3.0s range
+        const decayTime = (0.4 + decay * 2.6) * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% variance
 
-        // 808 Kick Core: Bridged-T Network emulation
+        // 808 Kick Core: Bridged-T Network emulation (Self-oscillating filter produces sine)
         const osc = new Tone.Oscillator(tune, "sine");
         osc.phase = Math.random() * 360; // Analog phase randomization
         const masterGain = new Tone.Gain(0);
@@ -17,11 +17,12 @@ export class TR808Kick {
         osc.connect(masterGain);
         masterGain.connect(this.destination);
 
-        // Micro-randomization: Pitch Drift
-        const drift = (Math.random() * 2 - 1) * 0.5;
+        // Micro-randomization: Pitch Drift (+/- 1-2 cents)
+        const drift = (Math.random() * 2 - 1) * 0.2;
 
-        // Pitch Envelope: Start high (~150Hz) and drop quickly to simulate the membrane hit
-        const startFreq = 150 + drift;
+        // Pitch Envelope: Start high and drop quickly to simulate the membrane hit
+        // Research: start at tune * 2.5, drop in 50ms
+        const startFreq = tune * 2.5 + drift;
         const endFreq = tune + drift;
         const pitchDropTime = 0.05; // 50ms drop
 
@@ -32,29 +33,11 @@ export class TR808Kick {
         masterGain.gain.setValueAtTime(1, time);
         masterGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
-        // Attack Click: Dirac impulse / very fast transient generator
-        const clickOsc = new Tone.Oscillator(startFreq * 2, "sine");
-        const clickGain = new Tone.Gain(0);
-        clickOsc.connect(clickGain);
-        clickGain.connect(this.destination);
-
-        clickOsc.frequency.setValueAtTime(startFreq * 2, time);
-        clickOsc.frequency.exponentialRampToValueAtTime(10, time + 0.02);
-
-        clickGain.gain.setValueAtTime(0.5, time);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.01);
-
         osc.start(time).stop(time + decayTime);
-        clickOsc.start(time).stop(time + 0.02);
 
         osc.onstop = () => {
             osc.dispose();
             masterGain.dispose();
-        };
-
-        clickOsc.onstop = () => {
-            clickOsc.dispose();
-            clickGain.dispose();
         };
     }
 }

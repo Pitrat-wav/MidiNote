@@ -12,7 +12,10 @@ export class TR808Clap {
 
     trigger(time: number, pitch: number, decay: number) {
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const bpf = new Tone.Filter(1000 + pitch * 1000, "bandpass");
+
+        // Analog drift for filter
+        const filterFreq = (1000 + pitch * 1000) * (1 + (Math.random() * 0.04 - 0.02));
+        const bpf = new Tone.Filter(filterFreq, "bandpass");
         const gain = new Tone.Gain(0).connect(this.destination);
 
         noiseSrc.connect(bpf);
@@ -20,7 +23,7 @@ export class TR808Clap {
 
         // Triple attack "snaps"
         const snapCount = 3;
-        const snapInterval = 0.01;
+        const snapInterval = 0.01 + (Math.random() * 0.002 - 0.001); // Randomize snap interval slightly
         for (let i = 0; i < snapCount; i++) {
             const snapTime = time + i * snapInterval;
             gain.gain.setValueAtTime(1, snapTime);
@@ -29,7 +32,8 @@ export class TR808Clap {
 
         // Final decay
         const finalDecayStart = time + snapCount * snapInterval;
-        const decayTime = 0.1 + decay * 0.5;
+        // Analog drift for decay
+        const decayTime = (0.1 + decay * 0.5) * (1 + (Math.random() * 0.04 - 0.02));
         gain.gain.setValueAtTime(1, finalDecayStart);
         gain.gain.exponentialRampToValueAtTime(0.001, finalDecayStart + decayTime);
 

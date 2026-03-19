@@ -6,23 +6,26 @@ export class TR808HiHat {
     constructor(private destination: Tone.ToneAudioNode) { }
 
     trigger(time: number, isOpen: boolean, pitch: number, decay: number) {
+        // Create nodes
         const mixGain = new Tone.Gain(0.15);
+        const bpf1 = new Tone.Filter(3440, "bandpass");
+        const bpf2 = new Tone.Filter(7100, "bandpass");
+        const envGain = new Tone.Gain(0);
+        const hpf = new Tone.Filter(7000, "highpass");
+
+        // Pitch Multiplier (0.8x to 1.2x)
+        const pitchMultiplier = 0.8 + pitch * 0.4;
+
+        // Create 6 Square Wave Oscillators (Schmitt Trigger Matrix)
         const oscillators = this.frequencies.map(freq => {
-            const drift = (Math.random() - 0.5) * 4;
-            // Use pitch to shift all frequencies slightly
-            const osc = new Tone.Oscillator(freq * (0.5 + pitch) + drift, "square");
+            const drift = (Math.random() - 0.5) * 4; // Analog drift
+            const osc = new Tone.Oscillator(freq * pitchMultiplier + drift, "square");
             osc.connect(mixGain);
             return osc;
         });
 
-        const bpf1 = new Tone.Filter(3500, "bandpass"); // 3.5kHz
-        bpf1.Q.value = 1.5;
-        const bpf2 = new Tone.Filter(7000, "bandpass"); // 7kHz
-        bpf2.Q.value = 1.5;
-
-        const envGain = new Tone.Gain(0);
-        const hpf = new Tone.Filter(7000, "highpass"); // 7kHz high-pass cleanup
-
+        // Routing Graph
+        // Oscillators -> MixGain -> [BPF1, BPF2] (Parallel) -> EnvGain -> HPF -> Destination
         mixGain.connect(bpf1);
         mixGain.connect(bpf2);
         bpf1.connect(envGain);
@@ -30,17 +33,24 @@ export class TR808HiHat {
         envGain.connect(hpf);
         hpf.connect(this.destination);
 
-        // decay: 0.5 maps to standard 808 times
-        const decayTime = isOpen ? (0.2 + decay * 0.8) : (0.02 + decay * 0.1);
+        // Filter Q values
+        bpf1.Q.value = 1.5;
+        bpf2.Q.value = 1.5;
 
+        // Decay: Closed Hat (40-60ms), Open Hat (300-500ms)
+        const decayTime = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
+
+        // VCA Envelope
         envGain.gain.setValueAtTime(1, time);
         envGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
+        // Scheduling
         oscillators.forEach(osc => {
             osc.start(time).stop(time + decayTime);
         });
 
-        // Disposal
+        // Disposal - Explicitly clean up all 11-12 nodes to prevent memory leaks
+        // We use the first oscillator's onstop event to trigger the cleanup
         oscillators[0].onstop = () => {
             oscillators.forEach(o => o.dispose());
             mixGain.dispose();

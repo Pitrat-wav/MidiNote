@@ -33,10 +33,10 @@ interface DrumState {
 
 export const useDrumStore = create<DrumState>((set) => ({
     kick: { steps: 16, pulses: 4, rotate: 0, decay: 0.5, pitch: 0.5 },
-    snare: { steps: 16, pulses: 0, rotate: 0, decay: 0.5, pitch: 0.5 },
-    hihat: { steps: 16, pulses: 8, rotate: 0, decay: 0.5, pitch: 0.5 },
+    snare: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
+    hihat: { steps: 16, pulses: 12, rotate: 0, decay: 0.5, pitch: 0.5 },
     hihatOpen: { steps: 16, pulses: 0, rotate: 0, decay: 0.5, pitch: 0.5 },
-    clap: { steps: 16, pulses: 0, rotate: 0, decay: 0.5, pitch: 0.5 },
+    clap: { steps: 16, pulses: 2, rotate: 12, decay: 0.5, pitch: 0.5 },
     kit: '808',
     setParams: (drum, params) => set((state) => ({
         [drum]: { ...state[drum], ...params }

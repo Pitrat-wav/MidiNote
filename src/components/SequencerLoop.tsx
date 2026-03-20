@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import * as Tone from 'tone'
 import { useAudioStore } from '../store/audioStore'
 import { useDrumStore, useBassStore, useSequencerStore } from '../store/instrumentStore'
-import { bjorklund } from '../logic/bjorklund'
+import { bjorklund, rotateArray } from '../logic/bjorklund'
 import { GridWalker } from '../logic/GridWalker'
 import { useHarmonyStore, usePadStore } from '../store/instrumentStore'
 import { generatePadProgression } from '../logic/PadGenerator'
@@ -38,11 +38,11 @@ export function SequencerLoop() {
         const updatePatterns = () => {
             const d = useDrumStore.getState()
             drumPatternsRef.current = {
-                kick: bjorklund(d.kick.steps, d.kick.pulses),
-                snare: bjorklund(d.snare.steps, d.snare.pulses),
-                hihat: bjorklund(d.hihat.steps, d.hihat.pulses),
-                hihatOpen: bjorklund(d.hihatOpen.steps, d.hihatOpen.pulses),
-                clap: bjorklund(d.clap.steps, d.clap.pulses)
+                kick: rotateArray(bjorklund(d.kick.steps, d.kick.pulses), d.kick.rotate),
+                snare: rotateArray(bjorklund(d.snare.steps, d.snare.pulses), d.snare.rotate),
+                hihat: rotateArray(bjorklund(d.hihat.steps, d.hihat.pulses), d.hihat.rotate),
+                hihatOpen: rotateArray(bjorklund(d.hihatOpen.steps, d.hihatOpen.pulses), d.hihatOpen.rotate),
+                clap: rotateArray(bjorklund(d.clap.steps, d.clap.pulses), d.clap.rotate)
             }
         }
 

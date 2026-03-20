@@ -5,13 +5,17 @@ export class TR808HiHat {
 
     constructor(private destination: Tone.ToneAudioNode) { }
 
-    trigger(time: number, isOpen: boolean, pitch: number, decay: number) {
+    trigger(time: number, isOpen: boolean, pitch: number, decay: number, velocity: number = 0.8) {
+        // Micro-randomization
+        const filterDrift = 1 + (Math.random() * 0.06 - 0.03); // +/- 3%
+        const decayVariance = 1 + (Math.random() * 0.1 - 0.05);
+
         // Create nodes
         const mixGain = new Tone.Gain(0.15);
-        const bpf1 = new Tone.Filter(3440, "bandpass");
-        const bpf2 = new Tone.Filter(7100, "bandpass");
+        const bpf1 = new Tone.Filter(3440 * filterDrift, "bandpass");
+        const bpf2 = new Tone.Filter(7100 * filterDrift, "bandpass");
         const envGain = new Tone.Gain(0);
-        const hpf = new Tone.Filter(7000, "highpass");
+        const hpf = new Tone.Filter(7000 * filterDrift, "highpass");
 
         // Pitch Multiplier (0.8x to 1.2x)
         const pitchMultiplier = 0.8 + pitch * 0.4;
@@ -25,7 +29,6 @@ export class TR808HiHat {
         });
 
         // Routing Graph
-        // Oscillators -> MixGain -> [BPF1, BPF2] (Parallel) -> EnvGain -> HPF -> Destination
         mixGain.connect(bpf1);
         mixGain.connect(bpf2);
         bpf1.connect(envGain);
@@ -38,10 +41,10 @@ export class TR808HiHat {
         bpf2.Q.value = 1.5;
 
         // Decay: Closed Hat (40-60ms), Open Hat (300-500ms)
-        const decayTime = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
+        const decayTime = (isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02)) * decayVariance;
 
-        // VCA Envelope
-        envGain.gain.setValueAtTime(1, time);
+        // VCA Envelope scaled by velocity
+        envGain.gain.setValueAtTime(velocity, time);
         envGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
         // Scheduling
@@ -49,8 +52,7 @@ export class TR808HiHat {
             osc.start(time).stop(time + decayTime);
         });
 
-        // Disposal - Explicitly clean up all 11-12 nodes to prevent memory leaks
-        // We use the first oscillator's onstop event to trigger the cleanup
+        // Disposal
         oscillators[0].onstop = () => {
             oscillators.forEach(o => o.dispose());
             mixGain.dispose();

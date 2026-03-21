@@ -20,9 +20,15 @@ export class TR808HiHat {
         const oscillators = this.frequencies.map(freq => {
             const drift = (Math.random() - 0.5) * 4; // Analog drift
             const osc = new Tone.Oscillator(freq * pitchMultiplier + drift, "square");
+            osc.phase = Math.random() * 360; // Analog phase randomization
             osc.connect(mixGain);
             return osc;
         });
+
+        // Micro-randomization: Filter Cutoff (+/- 2%)
+        bpf1.frequency.value = 3440 * (1 + (Math.random() * 0.04 - 0.02));
+        bpf2.frequency.value = 7100 * (1 + (Math.random() * 0.04 - 0.02));
+        hpf.frequency.value = 7000 * (1 + (Math.random() * 0.04 - 0.02));
 
         // Routing Graph
         // Oscillators -> MixGain -> [BPF1, BPF2] (Parallel) -> EnvGain -> HPF -> Destination
@@ -38,7 +44,8 @@ export class TR808HiHat {
         bpf2.Q.value = 1.5;
 
         // Decay: Closed Hat (40-60ms), Open Hat (300-500ms)
-        const decayTime = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
+        // Micro-randomization: Decay Time (+/- 2%)
+        const decayTime = (isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02)) * (1 + (Math.random() * 0.04 - 0.02));
 
         // VCA Envelope
         envGain.gain.setValueAtTime(1, time);

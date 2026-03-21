@@ -17,18 +17,22 @@ export class TR909Kick {
         // pitch: 0.5 -> 50Hz, maps to 45-55Hz
         const tune = 45 + pitch * 10;
         // decay: 0.5 -> 0.45s, maps to 0.3-0.6s
-        const decayTime = 0.3 + decay * 0.3;
+        // Micro-randomization: Decay Time (+/- 2%)
+        const decayTime = (0.3 + decay * 0.3) * (1 + (Math.random() * 0.04 - 0.02));
 
         // 909 Kick Body: Triangle Oscillator
-        const bodyOsc = new Tone.Oscillator(tune * 4.7, "triangle");
+        // Micro-randomization: Pitch Drift (+/- 0.5Hz)
+        const bodyDrift = (Math.random() * 2 - 1) * 0.5;
+        const bodyOsc = new Tone.Oscillator(tune * 4.7 + bodyDrift, "triangle");
+        bodyOsc.phase = Math.random() * 360; // Analog phase randomization
         const bodyGain = new Tone.Gain(0);
 
         bodyOsc.connect(bodyGain);
         bodyGain.connect(this.destination);
 
         // Aggressive Pitch Envelope: Start at Tune * 4.7 (~235Hz) and drop over 100ms
-        const startFreq = tune * 4.7;
-        const endFreq = tune;
+        const startFreq = tune * 4.7 + bodyDrift;
+        const endFreq = tune + bodyDrift;
 
         bodyOsc.frequency.setValueAtTime(startFreq, time);
         bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.1);
@@ -39,7 +43,9 @@ export class TR909Kick {
 
         // Click Layer (Noise)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const noiseFilter = new Tone.Filter(1000, "highpass"); // HPF > 1kHz to avoid phase trap
+        // Micro-randomization: Filter Cutoff (+/- 2%)
+        const noiseCutoff = 1000 * (1 + (Math.random() * 0.04 - 0.02));
+        const noiseFilter = new Tone.Filter(noiseCutoff, "highpass"); // HPF > 1kHz to avoid phase trap
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(noiseFilter);

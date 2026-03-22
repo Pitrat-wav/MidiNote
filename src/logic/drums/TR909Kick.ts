@@ -18,9 +18,12 @@ export class TR909Kick {
         const tune = 45 + pitch * 10;
         // decay: 0.5 -> 0.45s, maps to 0.3-0.6s
         const decayTime = 0.3 + decay * 0.3;
+        const decayDrift = 1 + (Math.random() * 0.04 - 0.02);
+        const finalDecay = decayTime * decayDrift;
 
         // 909 Kick Body: Triangle Oscillator
         const bodyOsc = new Tone.Oscillator(tune * 4.7, "triangle");
+        bodyOsc.phase = Math.random() * 360; // Analog phase randomization
         const bodyGain = new Tone.Gain(0);
 
         bodyOsc.connect(bodyGain);
@@ -35,23 +38,24 @@ export class TR909Kick {
 
         // VCA Envelope
         bodyGain.gain.setValueAtTime(1, time);
-        bodyGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
+        bodyGain.gain.exponentialRampToValueAtTime(0.001, time + finalDecay);
 
         // Click Layer (Noise)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const noiseFilter = new Tone.Filter(1000, "highpass"); // HPF > 1kHz to avoid phase trap
+        // HPF > 1kHz to avoid phase trap (+/- 2% cutoff variance)
+        const noiseFilter = new Tone.Filter(1000 * (1 + (Math.random() * 0.04 - 0.02)), "highpass");
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        // Ultra short envelope (10-20ms) for the click
-        const clickDecay = 0.02;
+        // Ultra short envelope (10-20ms) for the click (+/- 2% decay variance)
+        const clickDecay = 0.02 * (1 + (Math.random() * 0.04 - 0.02));
         noiseGain.gain.setValueAtTime(0.7, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 
-        bodyOsc.start(time).stop(time + decayTime);
+        bodyOsc.start(time).stop(time + finalDecay);
         noiseSrc.start(time).stop(time + clickDecay);
 
         bodyOsc.onstop = () => {

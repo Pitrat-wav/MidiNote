@@ -40,7 +40,8 @@ export class DrumMachine {
 
     constructor() {
         this.comp = new Tone.Compressor(-24, 4)
-        this.shaper = new Tone.WaveShaper(this.makeDistortionCurve(15))
+        this.shaper = new Tone.WaveShaper(this.makeDistortionCurve(20))
+        this.shaper.oversample = '4x'
         this.output = new Tone.Gain(1)
         this.outputKick = new Tone.Gain(1)
         this.outputSnare = new Tone.Gain(1)
@@ -50,26 +51,25 @@ export class DrumMachine {
 
         this.comp.chain(this.shaper, this.output, Tone.Destination)
 
-        // Let's bypass compression for individual drum channels for now, 
-        // to simplify routing and allow strict analog synth modeling.
-        // We'll route them directly to destination or output
-        this.outputKick.connect(Tone.Destination)
-        this.outputSnare.connect(Tone.Destination)
-        this.outputHihat.connect(Tone.Destination)
-        this.outputOpenHat.connect(Tone.Destination)
-        this.outputClap.connect(Tone.Destination)
+        // Routing all individual drum gain nodes to the master compression/saturation bus
+        // for the "glue" effect and analog saturation character.
+        this.outputKick.connect(this.comp)
+        this.outputSnare.connect(this.comp)
+        this.outputHihat.connect(this.comp)
+        this.outputOpenHat.connect(this.comp)
+        this.outputClap.connect(this.comp)
 
         this.kit808 = {
             kick: new TR808Kick(this.outputKick),
             snare: new TR808Snare(this.outputSnare),
-            hihat: new TR808HiHat(this.outputHihat),
+            hihat: new TR808HiHat(this.outputHihat, this.outputOpenHat),
             clap: new TR808Clap(this.outputClap)
         }
 
         this.kit909 = {
             kick: new TR909Kick(this.outputKick),
             snare: new TR909Snare(this.outputSnare),
-            hihat: new TR808HiHat(this.outputHihat), // Shared hihat synthesis for now
+            hihat: new TR808HiHat(this.outputHihat, this.outputOpenHat), // Shared hihat synthesis for now
             clap: new TR808Clap(this.outputClap)
         }
     }

@@ -13,42 +13,52 @@ export class TR909Kick {
         }
     }
 
-    trigger(time: number, pitch: number, decay: number) {
+    trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
         // pitch: 0.5 -> 50Hz, maps to 45-55Hz
         const tune = 45 + pitch * 10;
         // decay: 0.5 -> 0.45s, maps to 0.3-0.6s
-        const decayTime = 0.3 + decay * 0.3;
+        let decayTime = 0.3 + decay * 0.3;
+
+        // Analog variance: +/- 2% decay time
+        decayTime *= (1 + (Math.random() * 0.04 - 0.02));
 
         // 909 Kick Body: Triangle Oscillator
         const bodyOsc = new Tone.Oscillator(tune * 4.7, "triangle");
+        bodyOsc.phase = Math.random() * 360; // Random starting phase
+
         const bodyGain = new Tone.Gain(0);
 
         bodyOsc.connect(bodyGain);
         bodyGain.connect(this.destination);
 
+        // Micro-randomization: Pitch Drift (+/- 0.5Hz)
+        const drift = (Math.random() * 2 - 1) * 0.5;
+
         // Aggressive Pitch Envelope: Start at Tune * 4.7 (~235Hz) and drop over 100ms
-        const startFreq = tune * 4.7;
-        const endFreq = tune;
+        const startFreq = (tune * 4.7) + drift;
+        const endFreq = tune + drift;
 
         bodyOsc.frequency.setValueAtTime(startFreq, time);
         bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.1);
 
         // VCA Envelope
-        bodyGain.gain.setValueAtTime(1, time);
+        bodyGain.gain.setValueAtTime(velocity, time);
         bodyGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
         // Click Layer (Noise)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const noiseFilter = new Tone.Filter(1000, "highpass"); // HPF > 1kHz to avoid phase trap
+        // HPF > 1kHz to avoid phase trap (+/- 2% variance)
+        const filterFreq = 1000 * (1 + (Math.random() * 0.04 - 0.02));
+        const noiseFilter = new Tone.Filter(filterFreq, "highpass");
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        // Ultra short envelope (10-20ms) for the click
-        const clickDecay = 0.02;
-        noiseGain.gain.setValueAtTime(0.7, time);
+        // Ultra short envelope (10-20ms) for the click (+/- 2% variance)
+        const clickDecay = 0.02 * (1 + (Math.random() * 0.04 - 0.02));
+        noiseGain.gain.setValueAtTime(0.7 * velocity, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 
         bodyOsc.start(time).stop(time + decayTime);

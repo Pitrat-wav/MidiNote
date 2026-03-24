@@ -48,16 +48,14 @@ export class DrumMachine {
         this.outputOpenHat = new Tone.Gain(1)
         this.outputClap = new Tone.Gain(1)
 
-        this.comp.chain(this.shaper, this.output, Tone.Destination)
+        // Route individual drum channels through Compressor and WaveShaper
+        this.outputKick.connect(this.comp)
+        this.outputSnare.connect(this.comp)
+        this.outputHihat.connect(this.comp)
+        this.outputOpenHat.connect(this.comp)
+        this.outputClap.connect(this.comp)
 
-        // Let's bypass compression for individual drum channels for now, 
-        // to simplify routing and allow strict analog synth modeling.
-        // We'll route them directly to destination or output
-        this.outputKick.connect(Tone.Destination)
-        this.outputSnare.connect(Tone.Destination)
-        this.outputHihat.connect(Tone.Destination)
-        this.outputOpenHat.connect(Tone.Destination)
-        this.outputClap.connect(Tone.Destination)
+        this.comp.chain(this.shaper, this.output, Tone.Destination)
 
         this.kit808 = {
             kick: new TR808Kick(this.outputKick),
@@ -101,26 +99,19 @@ export class DrumMachine {
 
         if (this.currentKit === '808') {
             switch (drum) {
-                case 'kick': kit808.kick.trigger(time, p.pitch, p.decay); break
-                case 'snare': kit808.snare.trigger(time, p.pitch, p.decay); break
-                case 'hihat': kit808.hihat.trigger(time, false, p.pitch, p.decay); break
-                case 'hihatOpen': kit808.hihat.trigger(time, true, p.pitch, p.decay); break
-                case 'clap': kit808.clap.trigger(time, p.pitch, p.decay); break
+                case 'kick': kit808.kick.trigger(time, p.pitch, p.decay, velocity); break
+                case 'snare': kit808.snare.trigger(time, p.pitch, p.decay, velocity); break
+                case 'hihat': kit808.hihat.trigger(time, false, p.pitch, p.decay, velocity); break
+                case 'hihatOpen': kit808.hihat.trigger(time, true, p.pitch, p.decay, velocity); break
+                case 'clap': kit808.clap.trigger(time, p.pitch, p.decay, velocity); break
             }
         } else {
             switch (drum) {
-                case 'kick': kit909.kick.trigger(time, p.pitch, p.decay); break
-                case 'snare': kit909.snare.trigger(time, p.pitch, p.decay); break
-                case 'hihat': kit909.hihat.trigger(time, false, p.pitch, p.decay); break
-                case 'hihatOpen':
-                    // Reuse hihat logic but specify it's open
-                    // Note: technically TR909 uses samples for open hats, but we'll use our analog emulation for now
-                    kit909.hihat.trigger(time, true, p.pitch, p.decay);
-                    // However, we need to route it to the right output if possible. Our TR808HiHat 
-                    // currently has one destination baked in at constructor. To mix them separately, 
-                    // we will need an architectural tweak or just use the same channel. Let's just trigger it.
-                    break
-                case 'clap': kit909.clap.trigger(time, p.pitch, p.decay); break
+                case 'kick': kit909.kick.trigger(time, p.pitch, p.decay, velocity); break
+                case 'snare': kit909.snare.trigger(time, p.pitch, p.decay, velocity); break
+                case 'hihat': kit909.hihat.trigger(time, false, p.pitch, p.decay, velocity); break
+                case 'hihatOpen': kit909.hihat.trigger(time, true, p.pitch, p.decay, velocity); break
+                case 'clap': kit909.clap.trigger(time, p.pitch, p.decay, velocity); break
             }
         }
     }

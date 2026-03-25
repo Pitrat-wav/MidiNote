@@ -7,7 +7,9 @@ export class TR808Kick {
         // pitch: 0.5 -> 52.5Hz, maps to 45-60Hz range
         const tune = 45 + pitch * 15;
         // decay: 0.5 -> 1.7s, maps to 0.4-3.0s range
-        const decayTime = 0.4 + decay * 2.6;
+        const decayBase = 0.4 + decay * 2.6;
+        // Micro-randomization: +/- 2% decay time variance
+        const decayTime = decayBase * (1 + (Math.random() * 0.04 - 0.02));
 
         // 808 Kick Core: Bridged-T Network emulation
         const osc = new Tone.Oscillator(tune, "sine");
@@ -20,7 +22,7 @@ export class TR808Kick {
         // Micro-randomization: Pitch Drift (+/- 1-2 cents or ~0.5Hz)
         const drift = (Math.random() * 2 - 1) * 0.5;
 
-        // Pitch Envelope: Start high (Tune * 2.5) and drop quickly to simulate the membrane hit ('tonk')
+        // Pitch Envelope (808 'tonk'): Start high (Tune * 2.5) and drop quickly
         const startFreq = (tune * 2.5) + drift;
         const endFreq = tune + drift;
         const pitchDropTime = 0.05; // 50ms drop
@@ -34,6 +36,7 @@ export class TR808Kick {
 
         osc.start(time).stop(time + decayTime);
 
+        // Robust cleanup using onstop
         osc.onstop = () => {
             osc.dispose();
             masterGain.dispose();

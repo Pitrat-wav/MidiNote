@@ -6,8 +6,8 @@ export class TR808Kick {
     trigger(time: number, pitch: number, decay: number) {
         // pitch: 0.5 -> 52.5Hz, maps to 45-60Hz range
         const tune = 45 + pitch * 15;
-        // decay: 0.5 -> 1.7s, maps to 0.4-3.0s range
-        const decayTime = 0.4 + decay * 2.6;
+        // decay: 0.5 -> 1.7s, maps to 0.4-3.0s range. Include +/- 2% micro-randomization.
+        const decayTime = (0.4 + decay * 2.6) * (1 + (Math.random() * 0.04 - 0.02));
 
         // 808 Kick Core: Bridged-T Network emulation
         const osc = new Tone.Oscillator(tune, "sine");

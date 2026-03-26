@@ -93,10 +93,8 @@ export const useAudioStore = create<AudioState>((set, get) => ({
             if (channel === 'kick') drumMachine.outputKick.gain.value = value
             if (channel === 'snare') drumMachine.outputSnare.gain.value = value
             if (channel === 'hihat') drumMachine.outputHihat.gain.value = value
-            // We use hihat output for both open and closed for now in TR808HiHat as it shares a node, 
-            // but we can scale the volume parameter independently here if we had separate synths.
-            // For now, we'll map openHat to hihat channel, and clap to clap.
-            if (channel === 'hihatOpen') drumMachine.outputHihat.gain.value = value // Shared
+            // Open HiHat now has its own output node in DrumMachine
+            if (channel === 'hihatOpen') drumMachine.outputOpenHat.gain.value = value
             if (channel === 'clap') drumMachine.outputClap.gain.value = value
         }
 

@@ -19,28 +19,36 @@ export class TR909Snare {
         const freq1 = 160;
         const freq2 = 220;
 
-        const osc1 = new Tone.Oscillator(freq1 * 2, "triangle");
-        const osc2 = new Tone.Oscillator(freq2 * 2, "triangle");
+        // Micro-randomization
+        const drift = (Math.random() * 2 - 1) * 1; // +/- 1Hz drift
+        const dVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% decay variance
+        const fVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter variance
+
+        const osc1 = new Tone.Oscillator((freq1 * 2) + drift, "triangle");
+        const osc2 = new Tone.Oscillator((freq2 * 2) + drift, "triangle");
+        osc1.phase = Math.random() * 360;
+        osc2.phase = Math.random() * 360;
         const tonalGain = new Tone.Gain(0);
 
         osc1.connect(tonalGain);
         osc2.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        // 2x Pitch Sweep over 50ms
-        osc1.frequency.setValueAtTime(freq1 * 2, time);
-        osc1.frequency.exponentialRampToValueAtTime(freq1, time + 0.05);
-        osc2.frequency.setValueAtTime(freq2 * 2, time);
-        osc2.frequency.exponentialRampToValueAtTime(freq2, time + 0.05);
+        // 2x Pitch Sweep over 30ms (refined from 50ms)
+        const sweepTime = 0.03;
+        osc1.frequency.setValueAtTime((freq1 * 2) + drift, time);
+        osc1.frequency.exponentialRampToValueAtTime(freq1 + drift, time + sweepTime);
+        osc2.frequency.setValueAtTime((freq2 * 2) + drift, time);
+        osc2.frequency.exponentialRampToValueAtTime(freq2 + drift, time + sweepTime);
 
         tonalGain.gain.setValueAtTime(1, time);
-        tonalGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+        tonalGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2 * dVariance);
 
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const hpf = new Tone.Filter(1000, "highpass"); // HPF to protect fundamental
+        const hpf = new Tone.Filter(1000 * fVariance, "highpass"); // HPF to protect fundamental
         // LPF controlled by 'Tone' (pitch parameter here), range 4kHz to 8kHz
-        const lpf = new Tone.Filter(4000 + pitch * 4000, "lowpass");
+        const lpf = new Tone.Filter((4000 + pitch * 4000) * fVariance, "lowpass");
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(hpf);
@@ -48,13 +56,13 @@ export class TR909Snare {
         lpf.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        const snappyDecay = 0.1 + snappy * 0.4;
+        const snappyDecay = (0.1 + snappy * 0.4) * dVariance;
 
         noiseGain.gain.setValueAtTime(0.7, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
-        osc1.start(time).stop(time + 0.2);
-        osc2.start(time).stop(time + 0.2);
+        osc1.start(time).stop(time + 0.2 * dVariance);
+        osc2.start(time).stop(time + 0.2 * dVariance);
         noiseSrc.start(time).stop(time + snappyDecay + 0.1);
 
         osc1.onstop = () => {

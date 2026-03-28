@@ -3,15 +3,24 @@ import * as Tone from 'tone'
 export class TR808HiHat {
     private frequencies = [205.3, 304.4, 369.6, 522.7, 800, 540];
 
-    constructor(private destination: Tone.ToneAudioNode) { }
+    constructor(private closedDestination: Tone.ToneAudioNode, private openDestination: Tone.ToneAudioNode) { }
 
-    trigger(time: number, isOpen: boolean, pitch: number, decay: number) {
+    trigger(time: number, isOpen: boolean, pitch: number, decay: number, velocity: number = 0.8) {
+        // Choose destination
+        const destination = isOpen ? this.openDestination : this.closedDestination;
+
         // Create nodes
         const mixGain = new Tone.Gain(0.15);
-        const bpf1 = new Tone.Filter(3440, "bandpass");
-        const bpf2 = new Tone.Filter(7100, "bandpass");
+
+        // Micro-randomization: Filter Cutoff Variance (+/- 2%)
+        const bpf1Cutoff = 3440 * (1 + (Math.random() * 0.04 - 0.02));
+        const bpf2Cutoff = 7100 * (1 + (Math.random() * 0.04 - 0.02));
+        const hpfCutoff = 7000 * (1 + (Math.random() * 0.04 - 0.02));
+
+        const bpf1 = new Tone.Filter(bpf1Cutoff, "bandpass");
+        const bpf2 = new Tone.Filter(bpf2Cutoff, "bandpass");
         const envGain = new Tone.Gain(0);
-        const hpf = new Tone.Filter(7000, "highpass");
+        const hpf = new Tone.Filter(hpfCutoff, "highpass");
 
         // Pitch Multiplier (0.8x to 1.2x)
         const pitchMultiplier = 0.8 + pitch * 0.4;
@@ -20,6 +29,7 @@ export class TR808HiHat {
         const oscillators = this.frequencies.map(freq => {
             const drift = (Math.random() - 0.5) * 4; // Analog drift
             const osc = new Tone.Oscillator(freq * pitchMultiplier + drift, "square");
+            osc.phase = Math.random() * 360; // Random phase
             osc.connect(mixGain);
             return osc;
         });
@@ -31,17 +41,18 @@ export class TR808HiHat {
         bpf1.connect(envGain);
         bpf2.connect(envGain);
         envGain.connect(hpf);
-        hpf.connect(this.destination);
+        hpf.connect(destination);
 
         // Filter Q values
         bpf1.Q.value = 1.5;
         bpf2.Q.value = 1.5;
 
-        // Decay: Closed Hat (40-60ms), Open Hat (300-500ms)
-        const decayTime = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
+        // Decay: Closed Hat (40-60ms), Open Hat (300-500ms) with +/- 2% variance
+        const decayVariance = 1 + (Math.random() * 0.04 - 0.02);
+        const decayTime = (isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02)) * decayVariance;
 
-        // VCA Envelope
-        envGain.gain.setValueAtTime(1, time);
+        // VCA Envelope with velocity scaling
+        envGain.gain.setValueAtTime(velocity, time);
         envGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
         // Scheduling

@@ -13,13 +13,20 @@ export class TR808Snare {
         }
     }
 
-    trigger(time: number, pitch: number, snappy: number) {
+    trigger(time: number, pitch: number, snappy: number, velocity: number = 0.8) {
         // pitch maps to tone balance here (balance between low and high modes)
         const toneBalance = pitch;
 
+        // Micro-randomization: Pitch Drift (+/- 1Hz)
+        const drift = (Math.random() * 2 - 1);
+
         // 808 Membrane modes: fixed at ~238Hz and ~476Hz according to research
-        const oscLow = new Tone.Oscillator(238, "sine");
-        const oscHigh = new Tone.Oscillator(476, "sine");
+        const oscLow = new Tone.Oscillator(238 + drift, "sine");
+        const oscHigh = new Tone.Oscillator(476 + drift, "sine");
+
+        oscLow.phase = Math.random() * 360; // Random phase
+        oscHigh.phase = Math.random() * 360;
+
         const gainLow = new Tone.Gain(1 - toneBalance);
         const gainHigh = new Tone.Gain(toneBalance);
         const masterTonalGain = new Tone.Gain(0);
@@ -30,39 +37,42 @@ export class TR808Snare {
         gainHigh.connect(masterTonalGain);
         masterTonalGain.connect(this.destination);
 
-        masterTonalGain.gain.setValueAtTime(1, time);
-        // Tonal body decay is short (~200ms)
-        masterTonalGain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+        // Velocity scaled amplitude
+        masterTonalGain.gain.setValueAtTime(velocity, time);
+        // Tonal body decay is short (~200ms) with +/- 2% variance
+        const tonalDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02));
+        masterTonalGain.gain.exponentialRampToValueAtTime(0.001, time + tonalDecay);
 
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        // High-pass filter (>1800Hz) to prevent phase trap with tonal body
-        const noiseFilter = new Tone.Filter(1800, "highpass");
+
+        // Micro-randomization: High-pass filter (>1800Hz) +/- 2% cutoff variance
+        const hpfCutoff = 1800 * (1 + (Math.random() * 0.04 - 0.02));
+        const noiseFilter = new Tone.Filter(hpfCutoff, "highpass");
+
         const snappyGain = new Tone.Gain(0);
 
         noiseSrc.connect(noiseFilter);
         noiseFilter.connect(snappyGain);
         snappyGain.connect(this.destination);
 
-        // Snappy decay range: 0.25s to 0.4s
-        const snappyDecay = 0.25 + snappy * 0.15;
+        // Snappy decay range: 0.25s to 0.4s with +/- 2% variance
+        const snappyDecay = (0.25 + snappy * 0.15) * (1 + (Math.random() * 0.04 - 0.02));
 
-        snappyGain.gain.setValueAtTime(0.8, time);
+        snappyGain.gain.setValueAtTime(0.8 * velocity, time);
         snappyGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
-        oscLow.start(time).stop(time + 0.2);
-        oscHigh.start(time).stop(time + 0.2);
+        oscLow.start(time).stop(time + tonalDecay);
+        oscHigh.start(time).stop(time + tonalDecay);
         noiseSrc.start(time).stop(time + snappyDecay + 0.1);
 
-        // Cleanup
-        oscLow.onstop = () => {
+        // Cleanup: Use the longest-running node (noiseSource) to trigger disposal
+        noiseSrc.onended = () => {
             oscLow.dispose();
             oscHigh.dispose();
             gainLow.dispose();
             gainHigh.dispose();
             masterTonalGain.dispose();
-        };
-        noiseSrc.onended = () => {
             noiseSrc.dispose();
             noiseFilter.dispose();
             snappyGain.dispose();

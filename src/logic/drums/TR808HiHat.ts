@@ -5,11 +5,16 @@ export class TR808HiHat {
 
     constructor(private destination: Tone.ToneAudioNode) { }
 
-    trigger(time: number, isOpen: boolean, pitch: number, decay: number) {
+    trigger(time: number, isOpen: boolean, pitch: number, decay: number, velocity: number = 0.8) {
         // Create nodes
         const mixGain = new Tone.Gain(0.15);
-        const bpf1 = new Tone.Filter(3440, "bandpass");
-        const bpf2 = new Tone.Filter(7100, "bandpass");
+
+        // Micro-randomization: Filter Cutoff Variance (+/- 2%)
+        const bpf1Freq = 3440 * (1 + (Math.random() * 0.04 - 0.02));
+        const bpf2Freq = 7100 * (1 + (Math.random() * 0.04 - 0.02));
+
+        const bpf1 = new Tone.Filter(bpf1Freq, "bandpass");
+        const bpf2 = new Tone.Filter(bpf2Freq, "bandpass");
         const envGain = new Tone.Gain(0);
         const hpf = new Tone.Filter(7000, "highpass");
 
@@ -18,8 +23,11 @@ export class TR808HiHat {
 
         // Create 6 Square Wave Oscillators (Schmitt Trigger Matrix)
         const oscillators = this.frequencies.map(freq => {
-            const drift = (Math.random() - 0.5) * 4; // Analog drift
+            // Analog drift: +/- 2Hz
+            const drift = (Math.random() - 0.5) * 4;
             const osc = new Tone.Oscillator(freq * pitchMultiplier + drift, "square");
+            // Analog phase randomization: ensure each hit starts with random phase
+            osc.phase = Math.random() * 360;
             osc.connect(mixGain);
             return osc;
         });
@@ -38,10 +46,13 @@ export class TR808HiHat {
         bpf2.Q.value = 1.5;
 
         // Decay: Closed Hat (40-60ms), Open Hat (300-500ms)
-        const decayTime = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
+        let decayTime = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
 
-        // VCA Envelope
-        envGain.gain.setValueAtTime(1, time);
+        // Micro-randomization: Decay Variance (+/- 2%)
+        decayTime *= (1 + (Math.random() * 0.04 - 0.02));
+
+        // VCA Envelope: scale by velocity
+        envGain.gain.setValueAtTime(velocity, time);
         envGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
         // Scheduling

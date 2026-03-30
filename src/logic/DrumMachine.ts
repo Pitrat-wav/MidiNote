@@ -50,14 +50,13 @@ export class DrumMachine {
 
         this.comp.chain(this.shaper, this.output, Tone.Destination)
 
-        // Let's bypass compression for individual drum channels for now, 
-        // to simplify routing and allow strict analog synth modeling.
-        // We'll route them directly to destination or output
-        this.outputKick.connect(Tone.Destination)
-        this.outputSnare.connect(Tone.Destination)
-        this.outputHihat.connect(Tone.Destination)
-        this.outputOpenHat.connect(Tone.Destination)
-        this.outputClap.connect(Tone.Destination)
+        // Route individual drum channels through the master compressor and shaper
+        // for the "glue effect" and analog-style saturation.
+        this.outputKick.connect(this.comp)
+        this.outputSnare.connect(this.comp)
+        this.outputHihat.connect(this.comp)
+        this.outputOpenHat.connect(this.comp)
+        this.outputClap.connect(this.comp)
 
         this.kit808 = {
             kick: new TR808Kick(this.outputKick),

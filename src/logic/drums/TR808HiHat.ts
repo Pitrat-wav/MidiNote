@@ -5,13 +5,18 @@ export class TR808HiHat {
 
     constructor(private destination: Tone.ToneAudioNode) { }
 
-    trigger(time: number, isOpen: boolean, pitch: number, decay: number) {
+    trigger(time: number, isOpen: boolean, pitch: number, decay: number, velocity: number = 0.8) {
+        // Micro-randomization: Filter Cutoff Variance (+/- 2%)
+        const bpf1Freq = 3440 * (1 + (Math.random() * 0.04 - 0.02));
+        const bpf2Freq = 7100 * (1 + (Math.random() * 0.04 - 0.02));
+        const hpfFreq = 7000 * (1 + (Math.random() * 0.04 - 0.02));
+
         // Create nodes
         const mixGain = new Tone.Gain(0.15);
-        const bpf1 = new Tone.Filter(3440, "bandpass");
-        const bpf2 = new Tone.Filter(7100, "bandpass");
+        const bpf1 = new Tone.Filter(bpf1Freq, "bandpass");
+        const bpf2 = new Tone.Filter(bpf2Freq, "bandpass");
         const envGain = new Tone.Gain(0);
-        const hpf = new Tone.Filter(7000, "highpass");
+        const hpf = new Tone.Filter(hpfFreq, "highpass");
 
         // Pitch Multiplier (0.8x to 1.2x)
         const pitchMultiplier = 0.8 + pitch * 0.4;
@@ -37,11 +42,14 @@ export class TR808HiHat {
         bpf1.Q.value = 1.5;
         bpf2.Q.value = 1.5;
 
+        // Micro-randomization: +/- 2% on decay time
+        const decayVariation = 1 + (Math.random() * 0.04 - 0.02);
         // Decay: Closed Hat (40-60ms), Open Hat (300-500ms)
-        const decayTime = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
+        const decayTime = (isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02)) * decayVariation;
 
         // VCA Envelope
-        envGain.gain.setValueAtTime(1, time);
+        // Velocity scaling
+        envGain.gain.setValueAtTime(velocity, time);
         envGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
         // Scheduling

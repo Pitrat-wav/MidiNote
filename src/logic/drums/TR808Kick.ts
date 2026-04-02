@@ -17,8 +17,10 @@ export class TR808Kick {
         osc.connect(masterGain);
         masterGain.connect(this.destination);
 
-        // Micro-randomization: Pitch Drift (+/- 1-2 cents or ~0.5Hz)
+        // Micro-randomization: Pitch Drift (+/- 0.5Hz)
         const drift = (Math.random() * 2 - 1) * 0.5;
+        // VCA Decay variance (+/- 2%)
+        const finalDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02));
 
         // Pitch Envelope: Start high (Tune * 2.5) and drop quickly to simulate the membrane hit ('tonk')
         const startFreq = (tune * 2.5) + drift;
@@ -30,9 +32,9 @@ export class TR808Kick {
 
         // VCA Amp Envelope: Instant attack, adjustable exponential decay
         masterGain.gain.setValueAtTime(1, time);
-        masterGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
+        masterGain.gain.exponentialRampToValueAtTime(0.001, time + finalDecay);
 
-        osc.start(time).stop(time + decayTime);
+        osc.start(time).stop(time + finalDecay);
 
         osc.onstop = () => {
             osc.dispose();

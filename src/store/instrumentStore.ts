@@ -36,7 +36,7 @@ export const useDrumStore = create<DrumState>((set) => ({
     snare: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
     hihat: { steps: 16, pulses: 12, rotate: 0, decay: 0.5, pitch: 0.5 },
     hihatOpen: { steps: 16, pulses: 2, rotate: 2, decay: 0.5, pitch: 0.5 },
-    clap: { steps: 16, pulses: 0, rotate: 0, decay: 0.5, pitch: 0.5 },
+    clap: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
     kit: '909',
     setParams: (drum, params) => set((state) => ({
         [drum]: { ...state[drum], ...params }
@@ -112,6 +112,8 @@ interface SequencerState {
     setStage: (index: number, stage: Partial<Stage>) => void
     setSnakePattern: (p: SnakePattern) => void
     setSnakeNote: (index: number, note: number) => void
+    setRoot: (r: string) => void
+    setScale: (s: ScaleType) => void
     setCurrentStageIndex: (index: number) => void
     setCurrentSnakeIndex: (index: number) => void
 }
@@ -142,6 +144,14 @@ export const useSequencerStore = create<SequencerState>((set) => ({
         const newGrid = [...state.snakeGrid]
         newGrid[index] = note
         return { snakeGrid: newGrid }
+    }),
+    setRoot: (root) => set(() => {
+        useHarmonyStore.getState().setRoot(root)
+        return {}
+    }),
+    setScale: (scale) => set(() => {
+        useHarmonyStore.getState().setScale(scale)
+        return {}
     }),
     setCurrentStageIndex: (currentStageIndex) => set({ currentStageIndex }),
     setCurrentSnakeIndex: (currentSnakeIndex) => set({ currentSnakeIndex })

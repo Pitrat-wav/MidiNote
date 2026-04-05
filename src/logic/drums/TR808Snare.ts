@@ -6,14 +6,14 @@ export class TR808Snare {
     constructor(private destination: Tone.ToneAudioNode) {
         const sampleRate = Tone.getContext().sampleRate;
         const bufferSize = sampleRate * 0.5; // 500ms
-        this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
+        this.noiseBuffer = (Tone.getContext().rawContext as AudioContext).createBuffer(1, bufferSize, sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
         for (let i = 0; i < data.length; i++) {
             data[i] = Math.random() * 2 - 1;
         }
     }
 
-    trigger(time: number, pitch: number, snappy: number) {
+    trigger(time: number, pitch: number, snappy: number, velocity: number = 0.8) {
         // pitch maps to tone balance here (balance between low and high modes)
         const toneBalance = pitch;
 
@@ -40,7 +40,8 @@ export class TR808Snare {
         gainHigh.connect(masterTonalGain);
         masterTonalGain.connect(this.destination);
 
-        masterTonalGain.gain.setValueAtTime(1, time);
+        // Tonal body: Velocity scaling
+        masterTonalGain.gain.setValueAtTime(velocity, time);
         // Tonal body decay is short (~200ms)
         masterTonalGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
@@ -54,22 +55,21 @@ export class TR808Snare {
         noiseFilter.connect(snappyGain);
         snappyGain.connect(this.destination);
 
-        snappyGain.gain.setValueAtTime(0.8, time);
+        // Snappy Layer: Velocity scaling
+        snappyGain.gain.setValueAtTime(0.8 * velocity, time);
         snappyGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
         oscLow.start(time).stop(time + vcaDecay);
         oscHigh.start(time).stop(time + vcaDecay);
         noiseSrc.start(time).stop(time + snappyDecay + 0.1);
 
-        // Cleanup
-        oscLow.onstop = () => {
+        // Cleanup: Use the longest component (noise) to trigger full disposal
+        noiseSrc.onended = () => {
             oscLow.dispose();
             oscHigh.dispose();
             gainLow.dispose();
             gainHigh.dispose();
             masterTonalGain.dispose();
-        };
-        noiseSrc.onended = () => {
             noiseSrc.dispose();
             noiseFilter.dispose();
             snappyGain.dispose();

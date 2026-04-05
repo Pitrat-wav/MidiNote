@@ -5,7 +5,7 @@ export class TR808HiHat {
 
     constructor(private destination: Tone.ToneAudioNode) { }
 
-    trigger(time: number, isOpen: boolean, pitch: number, decay: number) {
+    trigger(time: number, isOpen: boolean, pitch: number, decay: number, velocity: number = 0.8) {
         // Create nodes
         const mixGain = new Tone.Gain(0.15);
         const bpf1 = new Tone.Filter(3440, "bandpass");
@@ -47,8 +47,8 @@ export class TR808HiHat {
         const decayBase = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
         const decayTime = decayBase * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
 
-        // VCA Envelope
-        envGain.gain.setValueAtTime(1, time);
+        // VCA Envelope: Velocity scaling
+        envGain.gain.setValueAtTime(velocity, time);
         envGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
         // Scheduling

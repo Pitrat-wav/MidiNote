@@ -84,9 +84,14 @@ export class DrumMachine {
         const deg = Math.PI / 180
         for (let i = 0; i < n_samples; ++i) {
             let x = i * 2 / n_samples - 1
+            // Research formula for saturation: (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x))
             curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x))
         }
         return curve
+    }
+
+    setSaturation(amount: number) {
+        this.shaper.curve = this.makeDistortionCurve(amount)
     }
 
     setKit(kit: '808' | '909') {
@@ -104,19 +109,19 @@ export class DrumMachine {
 
         if (this.currentKit === '808') {
             switch (drum) {
-                case 'kick': kit808.kick.trigger(time, p.pitch, p.decay); break
-                case 'snare': kit808.snare.trigger(time, p.pitch, p.decay); break
-                case 'hihat': kit808.hihat.trigger(time, false, p.pitch, p.decay); break
-                case 'hihatOpen': kit808.hihatOpen.trigger(time, true, p.pitch, p.decay); break
-                case 'clap': kit808.clap.trigger(time, p.pitch, p.decay); break
+                case 'kick': kit808.kick.trigger(time, p.pitch, p.decay, velocity); break
+                case 'snare': kit808.snare.trigger(time, p.pitch, p.decay, velocity); break
+                case 'hihat': kit808.hihat.trigger(time, false, p.pitch, p.decay, velocity); break
+                case 'hihatOpen': kit808.hihatOpen.trigger(time, true, p.pitch, p.decay, velocity); break
+                case 'clap': kit808.clap.trigger(time, p.pitch, p.decay, velocity); break
             }
         } else {
             switch (drum) {
-                case 'kick': kit909.kick.trigger(time, p.pitch, p.decay); break
-                case 'snare': kit909.snare.trigger(time, p.pitch, p.decay); break
-                case 'hihat': kit909.hihat.trigger(time, false, p.pitch, p.decay); break
-                case 'hihatOpen': kit909.hihatOpen.trigger(time, true, p.pitch, p.decay); break
-                case 'clap': kit909.clap.trigger(time, p.pitch, p.decay); break
+                case 'kick': kit909.kick.trigger(time, p.pitch, p.decay, velocity); break
+                case 'snare': kit909.snare.trigger(time, p.pitch, p.decay, velocity); break
+                case 'hihat': kit909.hihat.trigger(time, false, p.pitch, p.decay, velocity); break
+                case 'hihatOpen': kit909.hihatOpen.trigger(time, true, p.pitch, p.decay, velocity); break
+                case 'clap': kit909.clap.trigger(time, p.pitch, p.decay, velocity); break
             }
         }
     }

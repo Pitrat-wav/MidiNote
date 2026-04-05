@@ -6,7 +6,7 @@ export class TR909Snare {
     constructor(private destination: Tone.ToneAudioNode) {
         const sampleRate = Tone.getContext().sampleRate;
         const bufferSize = sampleRate * 0.5;
-        this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
+        this.noiseBuffer = (Tone.getContext().rawContext as AudioContext).createBuffer(1, bufferSize, sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
         // While original used LFSR, research says Math.random() is sufficient for Web Audio API context
         for (let i = 0; i < data.length; i++) {
@@ -14,7 +14,7 @@ export class TR909Snare {
         }
     }
 
-    trigger(time: number, pitch: number, snappy: number) {
+    trigger(time: number, pitch: number, snappy: number, velocity: number = 0.8) {
         // 909 Snare Body: 2 triangle oscillators fixed at ~160Hz and ~220Hz
         const freq1 = 160;
         const freq2 = 220;
@@ -43,7 +43,8 @@ export class TR909Snare {
         osc2.frequency.setValueAtTime(freq2 * 2 + drift, time);
         osc2.frequency.exponentialRampToValueAtTime(freq2 + drift, time + sweepTime);
 
-        tonalGain.gain.setValueAtTime(1, time);
+        // Tonal body: Velocity scaling
+        tonalGain.gain.setValueAtTime(velocity, time);
         tonalGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
         // Snappy Layer
@@ -58,19 +59,19 @@ export class TR909Snare {
         lpf.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        noiseGain.gain.setValueAtTime(0.7, time);
+        // Snappy: Velocity scaling
+        noiseGain.gain.setValueAtTime(0.7 * velocity, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
         osc1.start(time).stop(time + vcaDecay);
         osc2.start(time).stop(time + vcaDecay);
         noiseSrc.start(time).stop(time + snappyDecay + 0.1);
 
-        osc1.onstop = () => {
+        // Cleanup: anchored to noise source 'onended'
+        noiseSrc.onended = () => {
             osc1.dispose();
             osc2.dispose();
             tonalGain.dispose();
-        };
-        noiseSrc.onended = () => {
             noiseSrc.dispose();
             hpf.dispose();
             lpf.dispose();

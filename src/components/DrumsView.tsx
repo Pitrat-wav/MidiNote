@@ -1,15 +1,12 @@
 import { useDrumStore } from '../store/instrumentStore'
 import { Knob } from './Knob'
-import { useBassStore, useHarmonyStore } from '../store/instrumentStore'
-import { generateBassPattern } from '../logic/StingGenerator'
-import { Dices } from 'lucide-react'
 import { useAudioStore, AudioState } from '../store/audioStore'
 import { bjorklund } from '../logic/bjorklund'
 import { TransportControls } from './TransportControls'
 
 export function DrumsView() {
     const { kick, snare, hihat, hihatOpen, clap, kit, setParams, setKit } = useDrumStore()
-    const { drumMachine, volumes, setVolume } = useAudioStore()
+    const { drumMachine, volumes, setVolume, saturation, setSaturation } = useAudioStore()
 
     const updateDrum = (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', params: any) => {
         setParams(drum, params)
@@ -31,7 +28,18 @@ export function DrumsView() {
 
             <section className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0 }}>Настройки</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <h3 style={{ margin: 0 }}>Настройки</h3>
+                        <div style={{ borderLeft: '1px solid rgba(0,0,0,0.1)', paddingLeft: '16px' }}>
+                            <Knob
+                                label="DRIVE"
+                                value={saturation}
+                                min={0} max={100} step={1}
+                                onChange={(v) => setSaturation(v)}
+                                size={32}
+                            />
+                        </div>
+                    </div>
                     <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '8px' }}>
                         {(['808', '909'] as const).map(k => (
                             <button

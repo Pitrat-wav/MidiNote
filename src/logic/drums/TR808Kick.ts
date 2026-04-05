@@ -3,7 +3,7 @@ import * as Tone from 'tone'
 export class TR808Kick {
     constructor(private destination: Tone.ToneAudioNode) { }
 
-    trigger(time: number, pitch: number, decay: number) {
+    trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
         // pitch: 0.5 -> 52.5Hz, maps to 45-60Hz range
         const tune = 45 + pitch * 15;
         // decay: 0.5 -> 1.7s, maps to 0.4-3.0s range
@@ -23,7 +23,8 @@ export class TR808Kick {
         const finalDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02));
 
         // Pitch Envelope: Start high (Tune * 2.5) and drop quickly to simulate the membrane hit ('tonk')
-        const startFreq = (tune * 2.5) + drift;
+        // We also add a subtle velocity modulation to the pitch sweep (higher velocity = higher pitch start)
+        const startFreq = (tune * (2.5 + velocity * 0.2)) + drift;
         const endFreq = tune + drift;
         const pitchDropTime = 0.05; // 50ms drop
 
@@ -31,7 +32,8 @@ export class TR808Kick {
         osc.frequency.exponentialRampToValueAtTime(endFreq, time + pitchDropTime);
 
         // VCA Amp Envelope: Instant attack, adjustable exponential decay
-        masterGain.gain.setValueAtTime(1, time);
+        // Velocity scales the overall output
+        masterGain.gain.setValueAtTime(velocity, time);
         masterGain.gain.exponentialRampToValueAtTime(0.001, time + finalDecay);
 
         osc.start(time).stop(time + finalDecay);

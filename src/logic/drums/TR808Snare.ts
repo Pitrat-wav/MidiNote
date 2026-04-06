@@ -13,7 +13,7 @@ export class TR808Snare {
         }
     }
 
-    trigger(time: number, pitch: number, snappy: number) {
+    trigger(time: number, pitch: number, snappy: number, velocity: number = 0.8) {
         // pitch maps to tone balance here (balance between low and high modes)
         const toneBalance = pitch;
 
@@ -24,9 +24,9 @@ export class TR808Snare {
         const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
 
-        // 808 Membrane modes: fixed at ~238Hz and ~476Hz according to research
-        const oscLow = new Tone.Oscillator(238 + drift, "sine");
-        const oscHigh = new Tone.Oscillator(476 + drift, "sine");
+        // 808 Membrane modes: 180Hz and 330Hz as per research average
+        const oscLow = new Tone.Oscillator(180 + drift, "sine");
+        const oscHigh = new Tone.Oscillator(330 + drift, "sine");
         oscLow.phase = Math.random() * 360;
         oscHigh.phase = Math.random() * 360;
 
@@ -40,7 +40,8 @@ export class TR808Snare {
         gainHigh.connect(masterTonalGain);
         masterTonalGain.connect(this.destination);
 
-        masterTonalGain.gain.setValueAtTime(1, time);
+        // Apply velocity once at master gain level
+        masterTonalGain.gain.setValueAtTime(velocity, time);
         // Tonal body decay is short (~200ms)
         masterTonalGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
@@ -54,7 +55,7 @@ export class TR808Snare {
         noiseFilter.connect(snappyGain);
         snappyGain.connect(this.destination);
 
-        snappyGain.gain.setValueAtTime(0.8, time);
+        snappyGain.gain.setValueAtTime(0.8 * velocity, time);
         snappyGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
         oscLow.start(time).stop(time + vcaDecay);

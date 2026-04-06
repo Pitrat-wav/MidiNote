@@ -14,7 +14,7 @@ export class TR909Snare {
         }
     }
 
-    trigger(time: number, pitch: number, snappy: number) {
+    trigger(time: number, pitch: number, snappy: number, velocity: number = 0.8) {
         // 909 Snare Body: 2 triangle oscillators fixed at ~160Hz and ~220Hz
         const freq1 = 160;
         const freq2 = 220;
@@ -30,10 +30,14 @@ export class TR909Snare {
         const osc2 = new Tone.Oscillator(freq2 * 2 + drift, "triangle");
         osc1.phase = Math.random() * 360;
         osc2.phase = Math.random() * 360;
+
+        // Slight saturation/waveshaping for tonal body
+        const shaper = new Tone.WaveShaper((x) => Math.tanh(x * 1.5));
         const tonalGain = new Tone.Gain(0);
 
-        osc1.connect(tonalGain);
-        osc2.connect(tonalGain);
+        osc1.connect(shaper);
+        osc2.connect(shaper);
+        shaper.connect(tonalGain);
         tonalGain.connect(this.destination);
 
         // 2x Pitch Sweep over 30ms (research says ~30ms for 909 Snare)
@@ -43,7 +47,7 @@ export class TR909Snare {
         osc2.frequency.setValueAtTime(freq2 * 2 + drift, time);
         osc2.frequency.exponentialRampToValueAtTime(freq2 + drift, time + sweepTime);
 
-        tonalGain.gain.setValueAtTime(1, time);
+        tonalGain.gain.setValueAtTime(velocity, time);
         tonalGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
         // Snappy Layer
@@ -58,7 +62,7 @@ export class TR909Snare {
         lpf.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        noiseGain.gain.setValueAtTime(0.7, time);
+        noiseGain.gain.setValueAtTime(0.7 * velocity, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
         osc1.start(time).stop(time + vcaDecay);
@@ -68,6 +72,7 @@ export class TR909Snare {
         osc1.onstop = () => {
             osc1.dispose();
             osc2.dispose();
+            shaper.dispose();
             tonalGain.dispose();
         };
         noiseSrc.onended = () => {

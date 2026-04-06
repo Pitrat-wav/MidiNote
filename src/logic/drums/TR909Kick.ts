@@ -13,10 +13,12 @@ export class TR909Kick {
         }
     }
 
-    trigger(time: number, pitch: number, decay: number) {
-        // pitch: 0.5 -> 50Hz, maps to 45-55Hz
+    trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
+        // Research: Tune controls the pitch envelope decay time (0.05s - 0.15s)
+        const pitchEnvDecay = 0.05 + pitch * 0.1;
+        // Final frequency is relatively stable for 909 (45Hz - 55Hz)
         const tune = 45 + pitch * 10;
-        // decay: 0.5 -> 0.45s, maps to 0.3-0.6s
+        // Amp decay: 0.5 -> 0.45s, maps to 0.3-0.6s
         const decayTime = 0.3 + decay * 0.3;
 
         // Micro-randomization
@@ -24,23 +26,25 @@ export class TR909Kick {
         const vcaDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
 
-        // 909 Kick Body: Triangle Oscillator
-        const bodyOsc = new Tone.Oscillator(tune * 4.7 + drift, "triangle");
+        // 909 Kick Body: Triangle Oscillator + Smoothing LowPass Filter
+        const bodyOsc = new Tone.Oscillator(0, "triangle"); // Freq set via envelope
         bodyOsc.phase = Math.random() * 360;
+        const bodyFilter = new Tone.Filter(1000 * filterVariance, "lowpass");
         const bodyGain = new Tone.Gain(0);
 
-        bodyOsc.connect(bodyGain);
+        bodyOsc.connect(bodyFilter);
+        bodyFilter.connect(bodyGain);
         bodyGain.connect(this.destination);
 
-        // Aggressive Pitch Envelope: Start at Tune * 4.7 (~235Hz) and drop over 100ms
+        // Aggressive Pitch Envelope: Start at Tune * 4.7 and drop over variable duration (from Tune knob)
         const startFreq = tune * 4.7 + drift;
         const endFreq = tune + drift;
 
         bodyOsc.frequency.setValueAtTime(startFreq, time);
-        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.1);
+        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + pitchEnvDecay);
 
-        // VCA Envelope
-        bodyGain.gain.setValueAtTime(1, time);
+        // VCA Envelope with velocity scaling
+        bodyGain.gain.setValueAtTime(velocity, time);
         bodyGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
         // Click Layer (Noise)
@@ -52,9 +56,9 @@ export class TR909Kick {
         noiseFilter.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        // Ultra short envelope (10-20ms) for the click
+        // Ultra short envelope (10-20ms) for the click, also velocity scaled
         const clickDecay = 0.02 * (1 + (Math.random() * 0.04 - 0.02));
-        noiseGain.gain.setValueAtTime(0.7, time);
+        noiseGain.gain.setValueAtTime(0.7 * velocity, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 
         bodyOsc.start(time).stop(time + vcaDecay);
@@ -62,6 +66,7 @@ export class TR909Kick {
 
         bodyOsc.onstop = () => {
             bodyOsc.dispose();
+            bodyFilter.dispose();
             bodyGain.dispose();
         };
         noiseSrc.onended = () => {

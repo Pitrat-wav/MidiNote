@@ -3,7 +3,7 @@ import * as Tone from 'tone'
 export class TR808Kick {
     constructor(private destination: Tone.ToneAudioNode) { }
 
-    trigger(time: number, pitch: number, decay: number) {
+    trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
         // pitch: 0.5 -> 52.5Hz, maps to 45-60Hz range
         const tune = 45 + pitch * 15;
         // decay: 0.5 -> 1.7s, maps to 0.4-3.0s range
@@ -17,8 +17,8 @@ export class TR808Kick {
         osc.connect(masterGain);
         masterGain.connect(this.destination);
 
-        // Micro-randomization: Pitch Drift (+/- 0.5Hz)
-        const drift = (Math.random() * 2 - 1) * 0.5;
+        // Micro-randomization: Pitch Drift (+/- 1Hz)
+        const drift = (Math.random() * 2 - 1) * 1.0;
         // VCA Decay variance (+/- 2%)
         const finalDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02));
 
@@ -31,7 +31,7 @@ export class TR808Kick {
         osc.frequency.exponentialRampToValueAtTime(endFreq, time + pitchDropTime);
 
         // VCA Amp Envelope: Instant attack, adjustable exponential decay
-        masterGain.gain.setValueAtTime(1, time);
+        masterGain.gain.setValueAtTime(velocity, time);
         masterGain.gain.exponentialRampToValueAtTime(0.001, time + finalDecay);
 
         osc.start(time).stop(time + finalDecay);

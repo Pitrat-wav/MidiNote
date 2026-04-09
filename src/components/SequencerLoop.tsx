@@ -65,11 +65,13 @@ export function SequencerLoop() {
 
             // 1. Drums (Euclidean - using cached patterns)
             const patterns = drumPatternsRef.current
-            if (patterns.kick[step % patterns.kick.length]) drumMachine.triggerDrum('kick', time)
-            if (patterns.snare[step % patterns.snare.length]) drumMachine.triggerDrum('snare', time)
-            if (patterns.hihat[step % patterns.hihat.length]) drumMachine.triggerDrum('hihat', time)
-            if (patterns.hihatOpen[step % patterns.hihatOpen.length]) drumMachine.triggerDrum('hihatOpen', time)
-            if (patterns.clap[step % patterns.clap.length]) drumMachine.triggerDrum('clap', time)
+            // Added slight velocity randomization (0.7 - 0.9) for analog feel
+            const getVel = () => 0.7 + Math.random() * 0.2
+            if (patterns.kick[step % patterns.kick.length]) drumMachine.triggerDrum('kick', time, getVel())
+            if (patterns.snare[step % patterns.snare.length]) drumMachine.triggerDrum('snare', time, getVel())
+            if (patterns.hihat[step % patterns.hihat.length]) drumMachine.triggerDrum('hihat', time, getVel())
+            if (patterns.hihatOpen[step % patterns.hihatOpen.length]) drumMachine.triggerDrum('hihatOpen', time, getVel())
+            if (patterns.clap[step % patterns.clap.length]) drumMachine.triggerDrum('clap', time, getVel())
 
             // 2. Bass (Sting logic)
             const bassStep = currentBass.pattern[step]

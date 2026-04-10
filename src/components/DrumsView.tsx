@@ -1,3 +1,4 @@
+import React from 'react'
 import { useDrumStore } from '../store/instrumentStore'
 import { Knob } from './Knob'
 import { useBassStore, useHarmonyStore } from '../store/instrumentStore'
@@ -25,6 +26,8 @@ export function DrumsView() {
         if (drumMachine) drumMachine.setKit(newKit)
     }
 
+    const [drive, setDrive] = React.useState(15)
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <TransportControls title="Драм-машина" />
@@ -32,21 +35,33 @@ export function DrumsView() {
             <section className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: 0 }}>Настройки</h3>
-                    <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '8px' }}>
-                        {(['808', '909'] as const).map(k => (
-                            <button
-                                key={k}
-                                onClick={() => handleKitChange(k)}
-                                style={{
-                                    padding: '4px 12px',
-                                    fontSize: '11px',
-                                    borderRadius: '6px',
-                                    background: kit === k ? 'var(--tg-theme-button-color)' : 'transparent',
-                                    color: kit === k ? 'white' : 'inherit',
-                                    border: 'none'
-                                }}
-                            >{k}</button>
-                        ))}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <Knob
+                            label="DRIVE"
+                            value={drive}
+                            min={0} max={100} step={1}
+                            onChange={(v) => {
+                                setDrive(v)
+                                if (drumMachine) drumMachine.setSaturation(v)
+                            }}
+                            size={40}
+                        />
+                        <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '8px' }}>
+                            {(['808', '909'] as const).map(k => (
+                                <button
+                                    key={k}
+                                    onClick={() => handleKitChange(k)}
+                                    style={{
+                                        padding: '4px 12px',
+                                        fontSize: '11px',
+                                        borderRadius: '6px',
+                                        background: kit === k ? 'var(--tg-theme-button-color)' : 'transparent',
+                                        color: kit === k ? 'white' : 'inherit',
+                                        border: 'none'
+                                    }}
+                                >{k}</button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

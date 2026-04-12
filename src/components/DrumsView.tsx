@@ -31,7 +31,16 @@ export function DrumsView() {
 
             <section className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0 }}>Настройки</h3>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        <h3 style={{ margin: 0 }}>Настройки</h3>
+                        <Knob
+                            label="DRIVE"
+                            value={15} // Initial value from DrumMachine.ts
+                            min={0} max={100} step={1}
+                            onChange={(v) => drumMachine?.setSaturation(v)}
+                            size={34}
+                        />
+                    </div>
                     <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.05)', padding: '4px', borderRadius: '8px' }}>
                         {(['808', '909'] as const).map(k => (
                             <button

@@ -63,13 +63,14 @@ export function SequencerLoop() {
             const currentHarmony = useHarmonyStore.getState()
             const currentPads = usePadStore.getState()
 
-            // 1. Drums (Euclidean - using cached patterns)
+            // 1. Drums (Euclidean - using cached patterns) with velocity randomization
             const patterns = drumPatternsRef.current
-            if (patterns.kick[step % patterns.kick.length]) drumMachine.triggerDrum('kick', time)
-            if (patterns.snare[step % patterns.snare.length]) drumMachine.triggerDrum('snare', time)
-            if (patterns.hihat[step % patterns.hihat.length]) drumMachine.triggerDrum('hihat', time)
-            if (patterns.hihatOpen[step % patterns.hihatOpen.length]) drumMachine.triggerDrum('hihatOpen', time)
-            if (patterns.clap[step % patterns.clap.length]) drumMachine.triggerDrum('clap', time)
+            const getVel = () => 0.7 + Math.random() * 0.3
+            if (patterns.kick[step % patterns.kick.length]) drumMachine.triggerDrum('kick', time, getVel())
+            if (patterns.snare[step % patterns.snare.length]) drumMachine.triggerDrum('snare', time, getVel())
+            if (patterns.hihat[step % patterns.hihat.length]) drumMachine.triggerDrum('hihat', time, getVel())
+            if (patterns.hihatOpen[step % patterns.hihatOpen.length]) drumMachine.triggerDrum('hihatOpen', time, getVel())
+            if (patterns.clap[step % patterns.clap.length]) drumMachine.triggerDrum('clap', time, getVel())
 
             // 2. Bass (Sting logic)
             const bassStep = currentBass.pattern[step]

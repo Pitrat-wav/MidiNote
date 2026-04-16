@@ -13,7 +13,7 @@ export class TR808Snare {
         }
     }
 
-    trigger(time: number, pitch: number, snappy: number) {
+    trigger(time: number, pitch: number, snappy: number, velocity: number = 1.0) {
         // pitch maps to tone balance here (balance between low and high modes)
         const toneBalance = pitch;
 
@@ -40,7 +40,7 @@ export class TR808Snare {
         gainHigh.connect(masterTonalGain);
         masterTonalGain.connect(this.destination);
 
-        masterTonalGain.gain.setValueAtTime(1, time);
+        masterTonalGain.gain.setValueAtTime(velocity, time);
         // Tonal body decay is short (~200ms)
         masterTonalGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
@@ -54,7 +54,7 @@ export class TR808Snare {
         noiseFilter.connect(snappyGain);
         snappyGain.connect(this.destination);
 
-        snappyGain.gain.setValueAtTime(0.8, time);
+        snappyGain.gain.setValueAtTime(0.8 * velocity, time);
         snappyGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
         oscLow.start(time).stop(time + vcaDecay);

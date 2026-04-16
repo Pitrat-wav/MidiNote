@@ -9,7 +9,7 @@ import { TransportControls } from './TransportControls'
 
 export function DrumsView() {
     const { kick, snare, hihat, hihatOpen, clap, kit, setParams, setKit } = useDrumStore()
-    const { drumMachine, volumes, setVolume } = useAudioStore()
+    const { drumMachine, volumes, setVolume, saturation, setSaturation } = useAudioStore()
 
     const updateDrum = (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', params: any) => {
         setParams(drum, params)
@@ -51,6 +51,17 @@ export function DrumsView() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginTop: '24px' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '12px' }}>
+                        <div style={{ width: '60px', fontWeight: 'bold', fontSize: '10px' }}>MASTER</div>
+                        <Knob
+                            label="DRIVE"
+                            value={saturation}
+                            min={0} max={100} step={1}
+                            onChange={(v) => setSaturation(v)}
+                            size={40}
+                        />
+                    </div>
+
                     {[
                         { id: 'kick' as const, label: 'KICK' },
                         { id: 'snare' as const, label: 'SNARE' },

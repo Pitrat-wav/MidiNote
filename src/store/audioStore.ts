@@ -9,6 +9,7 @@ export interface AudioState {
     isPlaying: boolean
     bpm: number
     swing: number
+    saturation: number
     currentStep: number
     bassSynth: AcidSynth | null
     leadSynth: AcidSynth | null
@@ -28,6 +29,7 @@ export interface AudioState {
     togglePlay: () => void
     setBpm: (bpm: number) => void
     setSwing: (swing: number) => void
+    setSaturation: (value: number) => void
     setCurrentStep: (step: number) => void
     setVolume: (channel: 'bass' | 'lead' | 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap' | 'pads', value: number) => void
 }
@@ -37,6 +39,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     isPlaying: false,
     bpm: 128,
     swing: 0,
+    saturation: 20,
     currentStep: 0,
     bassSynth: null,
     leadSynth: null,
@@ -93,10 +96,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
             if (channel === 'kick') drumMachine.outputKick.gain.value = value
             if (channel === 'snare') drumMachine.outputSnare.gain.value = value
             if (channel === 'hihat') drumMachine.outputHihat.gain.value = value
-            // We use hihat output for both open and closed for now in TR808HiHat as it shares a node, 
-            // but we can scale the volume parameter independently here if we had separate synths.
-            // For now, we'll map openHat to hihat channel, and clap to clap.
-            if (channel === 'hihatOpen') drumMachine.outputHihat.gain.value = value // Shared
+            if (channel === 'hihatOpen') drumMachine.outputOpenHat.gain.value = value
             if (channel === 'clap') drumMachine.outputClap.gain.value = value
         }
 
@@ -111,6 +111,12 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     setSwing: (swing: number) => {
         Tone.Transport.swing = swing
         set({ swing })
+    },
+
+    setSaturation: (value: number) => {
+        const { drumMachine } = get()
+        if (drumMachine) drumMachine.setSaturation(value)
+        set({ saturation: value })
     },
 
     setCurrentStep: (currentStep: number) => set({ currentStep })

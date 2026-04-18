@@ -27,8 +27,10 @@ interface DrumState {
     hihatOpen: { steps: number, pulses: number, rotate: number, decay: number, pitch: number }
     clap: { steps: number, pulses: number, rotate: number, decay: number, pitch: number }
     kit: '808' | '909'
+    saturation: number
     setParams: (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', params: Partial<{ steps: number, pulses: number, rotate: number, decay: number, pitch: number }>) => void
     setKit: (kit: '808' | '909') => void
+    setSaturation: (saturation: number) => void
 }
 
 export const useDrumStore = create<DrumState>((set) => ({
@@ -36,12 +38,14 @@ export const useDrumStore = create<DrumState>((set) => ({
     snare: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
     hihat: { steps: 16, pulses: 12, rotate: 0, decay: 0.5, pitch: 0.5 },
     hihatOpen: { steps: 16, pulses: 2, rotate: 2, decay: 0.5, pitch: 0.5 },
-    clap: { steps: 16, pulses: 0, rotate: 0, decay: 0.5, pitch: 0.5 },
+    clap: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
     kit: '909',
+    saturation: 20,
     setParams: (drum, params) => set((state) => ({
         [drum]: { ...state[drum], ...params }
     })),
-    setKit: (kit) => set({ kit })
+    setKit: (kit) => set({ kit }),
+    setSaturation: (saturation) => set({ saturation })
 }))
 
 // Pad Store

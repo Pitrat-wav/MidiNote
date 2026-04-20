@@ -10,6 +10,7 @@ export interface AudioState {
     bpm: number
     swing: number
     currentStep: number
+    drumSaturation: number
     bassSynth: AcidSynth | null
     leadSynth: AcidSynth | null
     drumMachine: DrumMachine | null
@@ -29,6 +30,7 @@ export interface AudioState {
     setBpm: (bpm: number) => void
     setSwing: (swing: number) => void
     setCurrentStep: (step: number) => void
+    setDrumSaturation: (amount: number) => void
     setVolume: (channel: 'bass' | 'lead' | 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap' | 'pads', value: number) => void
 }
 
@@ -38,6 +40,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     bpm: 128,
     swing: 0,
     currentStep: 0,
+    drumSaturation: 20,
     bassSynth: null,
     leadSynth: null,
     drumMachine: null,
@@ -93,14 +96,17 @@ export const useAudioStore = create<AudioState>((set, get) => ({
             if (channel === 'kick') drumMachine.outputKick.gain.value = value
             if (channel === 'snare') drumMachine.outputSnare.gain.value = value
             if (channel === 'hihat') drumMachine.outputHihat.gain.value = value
-            // We use hihat output for both open and closed for now in TR808HiHat as it shares a node, 
-            // but we can scale the volume parameter independently here if we had separate synths.
-            // For now, we'll map openHat to hihat channel, and clap to clap.
-            if (channel === 'hihatOpen') drumMachine.outputHihat.gain.value = value // Shared
+            if (channel === 'hihatOpen') drumMachine.outputOpenHat.gain.value = value
             if (channel === 'clap') drumMachine.outputClap.gain.value = value
         }
 
         if (channel === 'pads' && padSynth) padSynth.synth.volume.value = Tone.gainToDb(value)
+    },
+
+    setDrumSaturation: (amount: number) => {
+        const { drumMachine } = get()
+        if (drumMachine) drumMachine.setSaturation(amount)
+        set({ drumSaturation: amount })
     },
 
     setBpm: (bpm: number) => {

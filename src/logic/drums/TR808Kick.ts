@@ -3,7 +3,7 @@ import * as Tone from 'tone'
 export class TR808Kick {
     constructor(private destination: Tone.ToneAudioNode) { }
 
-    trigger(time: number, pitch: number, decay: number) {
+    trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
         // pitch: 0.5 -> 52.5Hz, maps to 45-60Hz range
         const tune = 45 + pitch * 15;
         // decay: 0.5 -> 1.7s, maps to 0.4-3.0s range
@@ -16,6 +16,12 @@ export class TR808Kick {
 
         osc.connect(masterGain);
         masterGain.connect(this.destination);
+
+        // Pulse Click Layer (sine at tune*5, 5ms decay)
+        const clickOsc = new Tone.Oscillator(tune * 5, "sine");
+        const clickGain = new Tone.Gain(0);
+        clickOsc.connect(clickGain);
+        clickGain.connect(this.destination);
 
         // Micro-randomization: Pitch Drift (+/- 0.5Hz)
         const drift = (Math.random() * 2 - 1) * 0.5;
@@ -31,14 +37,21 @@ export class TR808Kick {
         osc.frequency.exponentialRampToValueAtTime(endFreq, time + pitchDropTime);
 
         // VCA Amp Envelope: Instant attack, adjustable exponential decay
-        masterGain.gain.setValueAtTime(1, time);
+        masterGain.gain.setValueAtTime(velocity, time);
         masterGain.gain.exponentialRampToValueAtTime(0.001, time + finalDecay);
 
+        // Click Envelope
+        clickGain.gain.setValueAtTime(velocity * 0.5, time);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.005);
+
         osc.start(time).stop(time + finalDecay);
+        clickOsc.start(time).stop(time + 0.005);
 
         osc.onstop = () => {
             osc.dispose();
             masterGain.dispose();
+            clickOsc.dispose();
+            clickGain.dispose();
         };
     }
 }

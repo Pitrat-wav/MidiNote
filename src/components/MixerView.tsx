@@ -44,6 +44,20 @@ export function MixerView() {
                     size={48}
                 />
                 <Knob
+                    label="OpenH"
+                    value={volumes.hihatOpen}
+                    min={0} max={1} step={0.01}
+                    onChange={(v) => setVolume('hihatOpen', v)}
+                    size={48}
+                />
+                <Knob
+                    label="Clap"
+                    value={volumes.clap}
+                    min={0} max={1} step={0.01}
+                    onChange={(v) => setVolume('clap', v)}
+                    size={48}
+                />
+                <Knob
                     label="Pads"
                     value={volumes.pads}
                     min={0} max={1} step={0.01}

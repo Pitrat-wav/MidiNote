@@ -59,13 +59,25 @@ export class TR909Kick {
         noiseGain.gain.setValueAtTime(velocity * 0.7, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 
+        // Rectangular Pulse Click: Short 5ms impulse for attack articulation
+        const pulseOsc = new Tone.Oscillator(0, "square");
+        const pulseGain = new Tone.Gain(0);
+        pulseOsc.connect(pulseGain);
+        pulseGain.connect(this.destination);
+
+        pulseGain.gain.setValueAtTime(velocity * 0.5, time);
+        pulseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.005);
+
         bodyOsc.start(time).stop(time + vcaDecay);
         noiseSrc.start(time).stop(time + clickDecay);
+        pulseOsc.start(time).stop(time + 0.005);
 
         bodyOsc.onstop = () => {
             bodyOsc.dispose();
             bodyFilter.dispose();
             bodyGain.dispose();
+            pulseOsc.dispose();
+            pulseGain.dispose();
         };
         noiseSrc.onended = () => {
             noiseSrc.dispose();

@@ -34,11 +34,26 @@ export class TR808Kick {
         masterGain.gain.setValueAtTime(velocity, time);
         masterGain.gain.exponentialRampToValueAtTime(0.001, time + finalDecay);
 
+        // Click Layer: Fast Pitch Sweep (5ms) for the 'tonk' attack
+        const clickOsc = new Tone.Oscillator(tune * 5, "sine");
+        const clickGain = new Tone.Gain(0);
+        clickOsc.connect(clickGain);
+        clickGain.connect(this.destination);
+
+        clickOsc.frequency.setValueAtTime(tune * 5, time);
+        clickOsc.frequency.exponentialRampToValueAtTime(tune, time + 0.005);
+
+        clickGain.gain.setValueAtTime(velocity, time);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.005);
+
         osc.start(time).stop(time + finalDecay);
+        clickOsc.start(time).stop(time + 0.005);
 
         osc.onstop = () => {
             osc.dispose();
             masterGain.dispose();
+            clickOsc.dispose();
+            clickGain.dispose();
         };
     }
 }

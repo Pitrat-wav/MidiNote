@@ -27,8 +27,10 @@ interface DrumState {
     hihatOpen: { steps: number, pulses: number, rotate: number, decay: number, pitch: number }
     clap: { steps: number, pulses: number, rotate: number, decay: number, pitch: number }
     kit: '808' | '909'
+    drive: number
     setParams: (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', params: Partial<{ steps: number, pulses: number, rotate: number, decay: number, pitch: number }>) => void
     setKit: (kit: '808' | '909') => void
+    setDrive: (drive: number) => void
 }
 
 export const useDrumStore = create<DrumState>((set) => ({
@@ -38,10 +40,12 @@ export const useDrumStore = create<DrumState>((set) => ({
     hihatOpen: { steps: 16, pulses: 2, rotate: 2, decay: 0.5, pitch: 0.5 },
     clap: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
     kit: '909',
+    drive: 20,
     setParams: (drum, params) => set((state) => ({
         [drum]: { ...state[drum], ...params }
     })),
-    setKit: (kit) => set({ kit })
+    setKit: (kit) => set({ kit }),
+    setDrive: (drive) => set({ drive })
 }))
 
 // Pad Store

@@ -89,6 +89,10 @@ export class DrumMachine {
         return curve
     }
 
+    setSaturation(amount: number) {
+        this.shaper.curve = this.makeDistortionCurve(amount)
+    }
+
     setKit(kit: '808' | '909') {
         this.currentKit = kit
     }

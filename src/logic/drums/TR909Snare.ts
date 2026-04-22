@@ -36,11 +36,14 @@ export class TR909Snare {
         osc2.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        // 2x Pitch Sweep over 30ms (research says ~30ms for 909 Snare)
+        // Pitch Sweep: ~300Hz to ~160Hz over 30ms (as per research)
         const sweepTime = 0.03;
-        osc1.frequency.setValueAtTime(freq1 * 2 + drift, time);
+        const startFreq1 = 300 + drift;
+        const startFreq2 = 330 + drift;
+
+        osc1.frequency.setValueAtTime(startFreq1, time);
         osc1.frequency.exponentialRampToValueAtTime(freq1 + drift, time + sweepTime);
-        osc2.frequency.setValueAtTime(freq2 * 2 + drift, time);
+        osc2.frequency.setValueAtTime(startFreq2, time);
         osc2.frequency.exponentialRampToValueAtTime(freq2 + drift, time + sweepTime);
 
         tonalGain.gain.setValueAtTime(velocity, time);

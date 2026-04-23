@@ -16,19 +16,20 @@ export class TR808HiHat {
         // Pitch Multiplier (0.8x to 1.2x)
         const pitchMultiplier = 0.8 + pitch * 0.4;
 
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
+        // Micro-randomization: +/- 2% filter cutoff variance
+        const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
 
         // Create 6 Square Wave Oscillators (Schmitt Trigger Matrix)
         const oscillators = this.frequencies.map(freq => {
-            const drift = (Math.random() - 0.5) * 4; // Analog drift
+            // Micro-randomization: +/- 1Hz pitch drift
+            const drift = (Math.random() * 2 - 1) * 1.0;
             const osc = new Tone.Oscillator(freq * pitchMultiplier + drift, "square");
-            osc.phase = Math.random() * 360;
+            osc.phase = Math.random() * 360; // Random phase
             osc.connect(mixGain);
             return osc;
         });
 
         // Routing Graph
-        // Oscillators -> MixGain -> [BPF1, BPF2] (Parallel) -> EnvGain -> HPF -> Destination
         mixGain.connect(bpf1);
         mixGain.connect(bpf2);
         bpf1.connect(envGain);
@@ -45,7 +46,8 @@ export class TR808HiHat {
 
         // Decay: Closed Hat (40-60ms), Open Hat (300-500ms)
         const decayBase = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
-        const decayTime = decayBase * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        // Micro-randomization: +/- 2% decay time variance
+        const decayTime = decayBase * (1 + (Math.random() * 0.04 - 0.02));
 
         // VCA Envelope
         envGain.gain.setValueAtTime(velocity, time);
@@ -56,8 +58,7 @@ export class TR808HiHat {
             osc.start(time).stop(time + decayTime);
         });
 
-        // Disposal - Explicitly clean up all 11-12 nodes to prevent memory leaks
-        // We use the first oscillator's onstop event to trigger the cleanup
+        // Disposal
         oscillators[0].onstop = () => {
             oscillators.forEach(o => o.dispose());
             mixGain.dispose();

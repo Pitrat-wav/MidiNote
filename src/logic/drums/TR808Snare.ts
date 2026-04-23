@@ -19,30 +19,35 @@ export class TR808Snare {
 
         // Micro-randomization
         const drift = (Math.random() * 2 - 1) * 1.0; // +/- 1Hz drift
-        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const vcaDecayLow = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const vcaDecayHigh = 0.15 * (1 + (Math.random() * 0.04 - 0.02)); // High mode decays faster
+
         const snappyDecayBase = 0.25 + snappy * 0.15;
         const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
 
-        // 808 Membrane modes: fixed at ~238Hz and ~476Hz according to research
+        // 808 Membrane modes: fixed at ~238Hz and ~476Hz
         const oscLow = new Tone.Oscillator(238 + drift, "sine");
         const oscHigh = new Tone.Oscillator(476 + drift, "sine");
         oscLow.phase = Math.random() * 360;
         oscHigh.phase = Math.random() * 360;
 
-        const gainLow = new Tone.Gain(1 - toneBalance);
-        const gainHigh = new Tone.Gain(toneBalance);
-        const masterTonalGain = new Tone.Gain(0);
+        // Independent gains for each mode to allow different decay times
+        const gainLow = new Tone.Gain(0);
+        const gainHigh = new Tone.Gain(0);
 
         oscLow.connect(gainLow);
         oscHigh.connect(gainHigh);
-        gainLow.connect(masterTonalGain);
-        gainHigh.connect(masterTonalGain);
-        masterTonalGain.connect(this.destination);
+        gainLow.connect(this.destination);
+        gainHigh.connect(this.destination);
 
-        masterTonalGain.gain.setValueAtTime(velocity, time);
-        // Tonal body decay is short (~200ms)
-        masterTonalGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
+        // Low mode envelope
+        gainLow.gain.setValueAtTime(velocity * (1 - toneBalance), time);
+        gainLow.gain.exponentialRampToValueAtTime(0.001, time + vcaDecayLow);
+
+        // High mode envelope (decays faster for more authentic 808 feel)
+        gainHigh.gain.setValueAtTime(velocity * toneBalance, time);
+        gainHigh.gain.exponentialRampToValueAtTime(0.001, time + vcaDecayHigh);
 
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
@@ -61,17 +66,18 @@ export class TR808Snare {
         snappyGain.gain.setValueAtTime(velocity * 0.8, time);
         snappyGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
-        oscLow.start(time).stop(time + vcaDecay);
-        oscHigh.start(time).stop(time + vcaDecay);
+        oscLow.start(time).stop(time + vcaDecayLow);
+        oscHigh.start(time).stop(time + vcaDecayHigh);
         noiseSrc.start(time).stop(time + snappyDecay + 0.1);
 
         // Cleanup
         oscLow.onstop = () => {
             oscLow.dispose();
-            oscHigh.dispose();
             gainLow.dispose();
+        };
+        oscHigh.onstop = () => {
+            oscHigh.dispose();
             gainHigh.dispose();
-            masterTonalGain.dispose();
         };
         noiseSrc.onended = () => {
             noiseSrc.dispose();

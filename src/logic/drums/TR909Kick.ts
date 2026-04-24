@@ -24,22 +24,26 @@ export class TR909Kick {
         const vcaDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
 
-        // 909 Kick Body: Triangle Oscillator with Low-Pass smoothing
+        // 909 Kick Body: Triangle Oscillator with Low-Pass smoothing and saturation
         const bodyOsc = new Tone.Oscillator(tune * 4.7 + drift, "triangle");
         bodyOsc.phase = Math.random() * 360;
+        const bodyShaper = new Tone.Chebyshev(2); // Subtle saturation
         const bodyFilter = new Tone.Filter(1000, "lowpass");
         const bodyGain = new Tone.Gain(0);
 
-        bodyOsc.connect(bodyFilter);
+        bodyOsc.connect(bodyShaper);
+        bodyShaper.connect(bodyFilter);
         bodyFilter.connect(bodyGain);
         bodyGain.connect(this.destination);
 
-        // Aggressive Pitch Envelope: Start at Tune * 4.7 (~235Hz) and drop over 100ms
+        // Aggressive Pitch Envelope: Start at Tune * 4.7 (~235Hz) and drop over Tune-dependent duration
+        // Tune parameter also affects the punchiness/sweep duration (0.05s to 0.15s)
+        const sweepDuration = 0.05 + pitch * 0.1;
         const startFreq = tune * 4.7 + drift;
         const endFreq = tune + drift;
 
         bodyOsc.frequency.setValueAtTime(startFreq, time);
-        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.1);
+        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + sweepDuration);
 
         // VCA Envelope
         bodyGain.gain.setValueAtTime(velocity, time);
@@ -74,6 +78,7 @@ export class TR909Kick {
 
         bodyOsc.onstop = () => {
             bodyOsc.dispose();
+            bodyShaper.dispose();
             bodyFilter.dispose();
             bodyGain.dispose();
             pulseOsc.dispose();

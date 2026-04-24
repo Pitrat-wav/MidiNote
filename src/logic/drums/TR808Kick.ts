@@ -12,9 +12,13 @@ export class TR808Kick {
         // 808 Kick Core: Bridged-T Network emulation
         const osc = new Tone.Oscillator(tune, "sine");
         osc.phase = Math.random() * 360; // Analog phase randomization
+
+        // Add subtle saturation to emulate diode nonlinearity in the Bridged-T network
+        const shaper = new Tone.Chebyshev(3);
         const masterGain = new Tone.Gain(0);
 
-        osc.connect(masterGain);
+        osc.connect(shaper);
+        shaper.connect(masterGain);
         masterGain.connect(this.destination);
 
         // Micro-randomization: Pitch Drift (+/- 0.5Hz)
@@ -51,6 +55,7 @@ export class TR808Kick {
 
         osc.onstop = () => {
             osc.dispose();
+            shaper.dispose();
             masterGain.dispose();
             clickOsc.dispose();
             clickGain.dispose();

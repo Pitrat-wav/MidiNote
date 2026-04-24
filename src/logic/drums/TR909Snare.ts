@@ -32,8 +32,12 @@ export class TR909Snare {
         osc2.phase = Math.random() * 360;
         const tonalGain = new Tone.Gain(0);
 
-        osc1.connect(tonalGain);
-        osc2.connect(tonalGain);
+        // Tonal Body Saturation (Waveshaping) as per research
+        const tonalShaper = new Tone.Chebyshev(2); // Adds some 2nd harmonic richness
+
+        osc1.connect(tonalShaper);
+        osc2.connect(tonalShaper);
+        tonalShaper.connect(tonalGain);
         tonalGain.connect(this.destination);
 
         // Pitch Sweep: ~300Hz to ~160Hz over 30ms (as per research)
@@ -71,6 +75,7 @@ export class TR909Snare {
         osc1.onstop = () => {
             osc1.dispose();
             osc2.dispose();
+            tonalShaper.dispose();
             tonalGain.dispose();
         };
         noiseSrc.onended = () => {

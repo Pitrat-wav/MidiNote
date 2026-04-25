@@ -37,7 +37,7 @@ export const useDrumStore = create<DrumState>((set) => ({
     kick: { steps: 16, pulses: 4, rotate: 0, decay: 0.5, pitch: 0.5 },
     snare: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
     hihat: { steps: 16, pulses: 12, rotate: 0, decay: 0.5, pitch: 0.5 },
-    hihatOpen: { steps: 16, pulses: 2, rotate: 2, decay: 0.5, pitch: 0.5 },
+    hihatOpen: { steps: 16, pulses: 4, rotate: 2, decay: 0.5, pitch: 0.5 },
     clap: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
     kit: '909',
     drive: 20,

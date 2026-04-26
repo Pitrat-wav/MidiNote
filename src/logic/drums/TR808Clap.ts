@@ -1,5 +1,9 @@
 import * as Tone from 'tone'
 
+/**
+ * TR-808 Clap: Multi-Attack Noise and Bandpass Filtering
+ * Based on research: "Программный синтез аналоговых ударных инструментов: Глубокий DSP-анализ"
+ */
 export class TR808Clap {
     private noiseBuffer: AudioBuffer;
 
@@ -12,28 +16,31 @@ export class TR808Clap {
 
     trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
+        const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
+
+        // BPF centered around ~1kHz-2kHz depending on pitch param
         const bpf = new Tone.Filter((1000 + pitch * 1000) * filterVariance, "bandpass");
         const gain = new Tone.Gain(0).connect(this.destination);
 
         noiseSrc.connect(bpf);
         bpf.connect(gain);
 
-        // Triple attack "snaps"
+        // Triple attack "snaps" (simulating hand claps hitting at slightly different times)
         const snapCount = 3;
         const snapIntervalBase = 0.01;
-        const snapInterval = snapIntervalBase * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% interval
+        const snapInterval = snapIntervalBase * (1 + (Math.random() * 0.04 - 0.02));
 
         for (let i = 0; i < snapCount; i++) {
             const snapTime = time + i * snapInterval;
             gain.gain.setValueAtTime(velocity, snapTime);
+            // Quick decay between snaps
             gain.gain.exponentialRampToValueAtTime(velocity * 0.1, snapTime + snapInterval * 0.8);
         }
 
-        // Final decay
+        // Final Tail Decay
         const finalDecayStart = time + snapCount * snapInterval;
         const decayTimeBase = 0.1 + decay * 0.5;
-        const decayTime = decayTimeBase * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const decayTime = decayTimeBase * (1 + (Math.random() * 0.04 - 0.02));
 
         gain.gain.setValueAtTime(velocity, finalDecayStart);
         gain.gain.exponentialRampToValueAtTime(0.001, finalDecayStart + decayTime);

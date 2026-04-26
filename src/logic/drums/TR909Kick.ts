@@ -1,15 +1,19 @@
 import * as Tone from 'tone'
 
+/**
+ * TR-909 Bass Drum: VCO, Pitch Envelope, and Click
+ * Based on research: "Программный синтез аналоговых ударных инструментов: Глубокий DSP-анализ"
+ */
 export class TR909Kick {
     private noiseBuffer: AudioBuffer;
     private bodyCurve: Float32Array;
 
     constructor(private destination: Tone.ToneAudioNode) {
-        // Soft Clipping curve from research
+        // Soft Clipping curve for "analog weight" (tanh-like)
         this.bodyCurve = this.makeDistortionCurve(10);
 
         const sampleRate = Tone.getContext().sampleRate;
-        const bufferSize = sampleRate * 0.05; // 50ms click
+        const bufferSize = sampleRate * 0.05; // 50ms buffer for click
         this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
@@ -30,22 +34,25 @@ export class TR909Kick {
     }
 
     trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
-        // pitch: 0.5 -> 50Hz, maps to 45-55Hz
-        const tune = 45 + pitch * 10;
-        // decay: 0.5 -> 0.45s, maps to 0.3-0.6s
+        // Base frequency: ~50Hz (sub-bass foundation)
+        const tune = 50;
+        // Pitch/Tune parameter: Maps to frequency sweep duration (0.05s to 0.15s) as per hardware behavior
+        const pitchSweepDecay = 0.05 + pitch * 0.10;
+        // Decay parameter: Maps to 0.3s to 0.6s
         const decayTime = 0.3 + decay * 0.3;
 
-        // Micro-randomization
-        const drift = (Math.random() * 2 - 1) * 0.5; // +/- 0.5Hz drift
-        const vcaDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
+        // Micro-randomization (Analog Drift)
+        const drift = (Math.random() * 2 - 1) * 0.5; // +/- 0.5Hz frequency drift
+        const vcaDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay variation
+        const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
 
-        // 909 Kick Body: Triangle Oscillator with saturation and Low-Pass smoothing
+        // 1. TONAL BODY (VCO)
+        // Uses Triangle wave for harmonic richness (chest punch)
         const bodyOsc = new Tone.Oscillator(tune * 4.7 + drift, "triangle");
         bodyOsc.phase = Math.random() * 360;
         const bodyShaper = new Tone.WaveShaper(this.bodyCurve);
         bodyShaper.oversample = '4x';
-        const bodyFilter = new Tone.Filter(1000, "lowpass");
+        const bodyFilter = new Tone.Filter(1000, "lowpass"); // Smoothing the triangle
         const bodyGain = new Tone.Gain(0);
 
         bodyOsc.connect(bodyShaper);
@@ -53,33 +60,32 @@ export class TR909Kick {
         bodyFilter.connect(bodyGain);
         bodyGain.connect(this.destination);
 
-        // Aggressive Pitch Envelope: Start at Tune * 4.7 (~235Hz) and drop over 100ms
+        // Pitch Envelope: 4.7x base frequency sweep
         const startFreq = tune * 4.7 + drift;
         const endFreq = tune + drift;
-
         bodyOsc.frequency.setValueAtTime(startFreq, time);
-        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.1);
+        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + pitchSweepDecay);
 
-        // VCA Envelope
+        // Body VCA
         bodyGain.gain.setValueAtTime(velocity, time);
         bodyGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
-        // Click Layer (Noise)
+        // 2. CLICK LAYER (Noise & Pulse)
+        // Noise component for high-frequency articulation
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const noiseFilter = new Tone.Filter(1000 * filterVariance, "highpass"); // HPF > 1kHz to avoid phase trap
+        const noiseFilter = new Tone.Filter(1000 * filterVariance, "highpass"); // Protect fundamental
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(this.destination);
 
-        // Ultra short envelope (10-20ms) for the click
         const clickDecay = 0.02 * (1 + (Math.random() * 0.04 - 0.02));
         noiseGain.gain.setValueAtTime(velocity * 0.7, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 
-        // Rectangular Pulse Click: Short 5ms impulse for attack articulation
-        const pulseOsc = new Tone.Oscillator(0, "square");
+        // Rectangular Pulse: Simulates the metal-on-skin impact
+        const pulseOsc = new Tone.Oscillator(100, "square"); // Fixed frequency pulse
         const pulseGain = new Tone.Gain(0);
         pulseOsc.connect(pulseGain);
         pulseGain.connect(this.destination);
@@ -87,6 +93,7 @@ export class TR909Kick {
         pulseGain.gain.setValueAtTime(velocity * 0.5, time);
         pulseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.005);
 
+        // Start and Schedule Cleanup
         bodyOsc.start(time).stop(time + vcaDecay);
         noiseSrc.start(time).stop(time + clickDecay);
         pulseOsc.start(time).stop(time + 0.005);

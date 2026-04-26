@@ -1,18 +1,21 @@
 import * as Tone from 'tone'
 
+/**
+ * TR-909 Snare Drum: Triangle Oscillators and LFSR-like Filtered Noise
+ * Based on research: "Программный синтез аналоговых ударных инструментов: Глубокий DSP-анализ"
+ */
 export class TR909Snare {
     private noiseBuffer: AudioBuffer;
     private bodyCurve: Float32Array;
 
     constructor(private destination: Tone.ToneAudioNode) {
-        // Soft Clipping curve from research
+        // Soft Clipping curve for "analog weight"
         this.bodyCurve = this.makeDistortionCurve(15);
 
         const sampleRate = Tone.getContext().sampleRate;
         const bufferSize = sampleRate * 0.5;
         this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
-        // While original used LFSR, research says Math.random() is sufficient for Web Audio API context
         for (let i = 0; i < data.length; i++) {
             data[i] = Math.random() * 2 - 1;
         }
@@ -31,13 +34,14 @@ export class TR909Snare {
     }
 
     trigger(time: number, pitch: number, snappy: number, velocity: number = 0.8) {
-        // 909 Snare Body: 2 triangle oscillators fixed at ~160Hz and ~220Hz
+        // 1. TONAL BODY (Two Triangle Oscillators)
+        // Base frequencies from research: ~160Hz and ~220Hz (dissonance for volume)
         const freq1 = 160;
         const freq2 = 220;
 
         // Micro-randomization
-        const drift = (Math.random() * 2 - 1) * 1.0; // +/- 1Hz drift
-        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const drift = (Math.random() * 2 - 1) * 1.0;
+        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02));
         const snappyDecayBase = 0.1 + snappy * 0.4;
         const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
@@ -46,7 +50,8 @@ export class TR909Snare {
         const osc2 = new Tone.Oscillator(freq2 * 2 + drift, "triangle");
         osc1.phase = Math.random() * 360;
         osc2.phase = Math.random() * 360;
-        // Routing with gain compensation to prevent clipping before the shaper
+
+        // Gain compensation and saturation routing
         const preShaperGain = new Tone.Gain(0.5);
         const bodyShaper = new Tone.WaveShaper(this.bodyCurve);
         bodyShaper.oversample = '4x';
@@ -60,8 +65,8 @@ export class TR909Snare {
         postShaperGain.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        // Pitch Sweep: ~300Hz to ~160Hz over 30ms (as per research)
-        const sweepTime = 0.03;
+        // Pitch Sweep: ~300Hz down to fundamental over 50ms
+        const sweepTime = 0.05;
         const startFreq1 = 300 + drift;
         const startFreq2 = 330 + drift;
 
@@ -73,10 +78,10 @@ export class TR909Snare {
         tonalGain.gain.setValueAtTime(velocity, time);
         tonalGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
-        // Snappy Layer
+        // 2. SNAPPY LAYER (Filtered LFSR-like noise)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const hpf = new Tone.Filter(1000 * filterVariance, "highpass"); // HPF to protect fundamental
-        // LPF controlled by 'Tone' (pitch parameter here), range 4kHz to 8kHz
+        const hpf = new Tone.Filter(1000 * filterVariance, "highpass"); // Protect fundamentals
+        // Tone control: adjusts LPF cutoff from 4kHz to 8kHz
         const lpf = new Tone.Filter((4000 + pitch * 4000) * filterVariance, "lowpass");
         const noiseGain = new Tone.Gain(0);
 
@@ -88,19 +93,20 @@ export class TR909Snare {
         noiseGain.gain.setValueAtTime(velocity * 0.7, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
+        // Schedule and Clean up
         osc1.start(time).stop(time + vcaDecay);
         osc2.start(time).stop(time + vcaDecay);
         noiseSrc.start(time).stop(time + snappyDecay + 0.1);
 
-        osc1.onstop = () => {
+        // Cleanup: Use the longest-running source (noise) as the anchor for disposal
+        // to prevent premature cutoff of the "Snappy" tail.
+        noiseSrc.onended = () => {
             osc1.dispose();
             osc2.dispose();
             preShaperGain.dispose();
             bodyShaper.dispose();
             postShaperGain.dispose();
             tonalGain.dispose();
-        };
-        noiseSrc.onended = () => {
             noiseSrc.dispose();
             hpf.dispose();
             lpf.dispose();

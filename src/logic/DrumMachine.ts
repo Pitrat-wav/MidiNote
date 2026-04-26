@@ -6,6 +6,10 @@ import { TR909Snare } from './drums/TR909Snare'
 import { TR808HiHat } from './drums/TR808HiHat'
 import { TR808Clap } from './drums/TR808Clap'
 
+/**
+ * DrumMachine: Orchestrates synthesized drum kits and master FX chain.
+ * Implements the "Glue Effect" using Compressor and WaveShaper as per research.
+ */
 export class DrumMachine {
     comp: Tone.Compressor
     shaper: Tone.WaveShaper

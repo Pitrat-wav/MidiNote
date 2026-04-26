@@ -1,11 +1,15 @@
 import * as Tone from 'tone'
 
+/**
+ * TR-808 Snare Drum: Dual Bridged-T and Filtered Noise
+ * Based on research: "Программный синтез аналоговых ударных инструментов: Глубокий DSP-анализ"
+ */
 export class TR808Snare {
     private noiseBuffer: AudioBuffer;
 
     constructor(private destination: Tone.ToneAudioNode) {
         const sampleRate = Tone.getContext().sampleRate;
-        const bufferSize = sampleRate * 0.5; // 500ms
+        const bufferSize = sampleRate * 0.5; // 500ms white noise buffer
         this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
         const data = this.noiseBuffer.getChannelData(0);
         for (let i = 0; i < data.length; i++) {
@@ -14,17 +18,18 @@ export class TR808Snare {
     }
 
     trigger(time: number, pitch: number, snappy: number, velocity: number = 0.8) {
-        // pitch maps to tone balance here (balance between low and high modes)
+        // pitch parameter maps to Tone Balance (relative levels of low vs high modes)
         const toneBalance = pitch;
 
         // Micro-randomization
-        const drift = (Math.random() * 2 - 1) * 1.0; // +/- 1Hz drift
-        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const drift = (Math.random() * 2 - 1) * 1.0;
+        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02));
         const snappyDecayBase = 0.25 + snappy * 0.15;
         const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
 
-        // 808 Membrane modes: fixed at ~238Hz and ~476Hz according to research
+        // 1. TONAL BODY (Dual Bridged-T Emulation)
+        // Average frequencies from research: Low ~238Hz, High ~476Hz
         const oscLow = new Tone.Oscillator(238 + drift, "sine");
         const oscHigh = new Tone.Oscillator(476 + drift, "sine");
         oscLow.phase = Math.random() * 360;
@@ -38,16 +43,16 @@ export class TR808Snare {
         gainLow.connect(this.destination);
         gainHigh.connect(this.destination);
 
-        // Independent envelopes for authenticity: High mode decays faster
+        // Authenticity: High mode decays faster than low mode
         gainLow.gain.setValueAtTime(velocity * (1 - toneBalance), time);
         gainLow.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
         gainHigh.gain.setValueAtTime(velocity * toneBalance, time);
         gainHigh.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay * 0.75);
 
-        // Snappy Layer
+        // 2. SNAPPY LAYER (Filtered Noise)
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        // High-pass filter (>1800Hz) to prevent phase trap with tonal body
+        // High-pass filter (>1800Hz) with Butterworth Q (0.707) to avoid "Phase Trap"
         const noiseFilter = new Tone.Filter({
             frequency: 1800 * filterVariance,
             type: "highpass",
@@ -62,18 +67,18 @@ export class TR808Snare {
         snappyGain.gain.setValueAtTime(velocity * 0.8, time);
         snappyGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
+        // Start and Dispose
         oscLow.start(time).stop(time + vcaDecay);
         oscHigh.start(time).stop(time + vcaDecay);
         noiseSrc.start(time).stop(time + snappyDecay + 0.1);
 
-        // Cleanup
-        oscLow.onstop = () => {
+        // Cleanup: Consolidate disposal to the longest-running source (noise)
+        // to ensure all nodes live until the sound fully decays.
+        noiseSrc.onended = () => {
             oscLow.dispose();
             oscHigh.dispose();
             gainLow.dispose();
             gainHigh.dispose();
-        };
-        noiseSrc.onended = () => {
             noiseSrc.dispose();
             noiseFilter.dispose();
             snappyGain.dispose();

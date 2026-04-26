@@ -2,8 +2,12 @@ import * as Tone from 'tone'
 
 export class TR909Kick {
     private noiseBuffer: AudioBuffer;
+    private bodyCurve: Float32Array;
 
     constructor(private destination: Tone.ToneAudioNode) {
+        // Soft Clipping curve from research
+        this.bodyCurve = this.makeDistortionCurve(10);
+
         const sampleRate = Tone.getContext().sampleRate;
         const bufferSize = sampleRate * 0.05; // 50ms click
         this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
@@ -11,6 +15,18 @@ export class TR909Kick {
         for (let i = 0; i < bufferSize; i++) {
             data[i] = Math.random() * 2 - 1;
         }
+    }
+
+    private makeDistortionCurve(amount: number) {
+        const k = amount;
+        const n_samples = 4096;
+        const curve = new Float32Array(n_samples);
+        const deg = Math.PI / 180;
+        for (let i = 0; i < n_samples; ++i) {
+            let x = i * 2 / n_samples - 1;
+            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+        }
+        return curve;
     }
 
     trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
@@ -24,13 +40,16 @@ export class TR909Kick {
         const vcaDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
 
-        // 909 Kick Body: Triangle Oscillator with Low-Pass smoothing
+        // 909 Kick Body: Triangle Oscillator with saturation and Low-Pass smoothing
         const bodyOsc = new Tone.Oscillator(tune * 4.7 + drift, "triangle");
         bodyOsc.phase = Math.random() * 360;
+        const bodyShaper = new Tone.WaveShaper(this.bodyCurve);
+        bodyShaper.oversample = '4x';
         const bodyFilter = new Tone.Filter(1000, "lowpass");
         const bodyGain = new Tone.Gain(0);
 
-        bodyOsc.connect(bodyFilter);
+        bodyOsc.connect(bodyShaper);
+        bodyShaper.connect(bodyFilter);
         bodyFilter.connect(bodyGain);
         bodyGain.connect(this.destination);
 
@@ -74,6 +93,7 @@ export class TR909Kick {
 
         bodyOsc.onstop = () => {
             bodyOsc.dispose();
+            bodyShaper.dispose();
             bodyFilter.dispose();
             bodyGain.dispose();
             pulseOsc.dispose();

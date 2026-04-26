@@ -2,8 +2,12 @@ import * as Tone from 'tone'
 
 export class TR909Snare {
     private noiseBuffer: AudioBuffer;
+    private bodyCurve: Float32Array;
 
     constructor(private destination: Tone.ToneAudioNode) {
+        // Soft Clipping curve from research
+        this.bodyCurve = this.makeDistortionCurve(15);
+
         const sampleRate = Tone.getContext().sampleRate;
         const bufferSize = sampleRate * 0.5;
         this.noiseBuffer = Tone.getContext().createBuffer(1, bufferSize, sampleRate);
@@ -12,6 +16,18 @@ export class TR909Snare {
         for (let i = 0; i < data.length; i++) {
             data[i] = Math.random() * 2 - 1;
         }
+    }
+
+    private makeDistortionCurve(amount: number) {
+        const k = amount;
+        const n_samples = 4096;
+        const curve = new Float32Array(n_samples);
+        const deg = Math.PI / 180;
+        for (let i = 0; i < n_samples; ++i) {
+            let x = i * 2 / n_samples - 1;
+            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+        }
+        return curve;
     }
 
     trigger(time: number, pitch: number, snappy: number, velocity: number = 0.8) {
@@ -30,10 +46,18 @@ export class TR909Snare {
         const osc2 = new Tone.Oscillator(freq2 * 2 + drift, "triangle");
         osc1.phase = Math.random() * 360;
         osc2.phase = Math.random() * 360;
+        // Routing with gain compensation to prevent clipping before the shaper
+        const preShaperGain = new Tone.Gain(0.5);
+        const bodyShaper = new Tone.WaveShaper(this.bodyCurve);
+        bodyShaper.oversample = '4x';
+        const postShaperGain = new Tone.Gain(2.0);
         const tonalGain = new Tone.Gain(0);
 
-        osc1.connect(tonalGain);
-        osc2.connect(tonalGain);
+        osc1.connect(preShaperGain);
+        osc2.connect(preShaperGain);
+        preShaperGain.connect(bodyShaper);
+        bodyShaper.connect(postShaperGain);
+        postShaperGain.connect(tonalGain);
         tonalGain.connect(this.destination);
 
         // Pitch Sweep: ~300Hz to ~160Hz over 30ms (as per research)
@@ -71,6 +95,9 @@ export class TR909Snare {
         osc1.onstop = () => {
             osc1.dispose();
             osc2.dispose();
+            preShaperGain.dispose();
+            bodyShaper.dispose();
+            postShaperGain.dispose();
             tonalGain.dispose();
         };
         noiseSrc.onended = () => {

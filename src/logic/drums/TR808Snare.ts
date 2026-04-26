@@ -30,19 +30,20 @@ export class TR808Snare {
         oscLow.phase = Math.random() * 360;
         oscHigh.phase = Math.random() * 360;
 
-        const gainLow = new Tone.Gain(1 - toneBalance);
-        const gainHigh = new Tone.Gain(toneBalance);
-        const masterTonalGain = new Tone.Gain(0);
+        const gainLow = new Tone.Gain(0);
+        const gainHigh = new Tone.Gain(0);
 
         oscLow.connect(gainLow);
         oscHigh.connect(gainHigh);
-        gainLow.connect(masterTonalGain);
-        gainHigh.connect(masterTonalGain);
-        masterTonalGain.connect(this.destination);
+        gainLow.connect(this.destination);
+        gainHigh.connect(this.destination);
 
-        masterTonalGain.gain.setValueAtTime(velocity, time);
-        // Tonal body decay is short (~200ms)
-        masterTonalGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
+        // Independent envelopes for authenticity: High mode decays faster
+        gainLow.gain.setValueAtTime(velocity * (1 - toneBalance), time);
+        gainLow.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
+
+        gainHigh.gain.setValueAtTime(velocity * toneBalance, time);
+        gainHigh.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay * 0.75);
 
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
@@ -71,7 +72,6 @@ export class TR808Snare {
             oscHigh.dispose();
             gainLow.dispose();
             gainHigh.dispose();
-            masterTonalGain.dispose();
         };
         noiseSrc.onended = () => {
             noiseSrc.dispose();

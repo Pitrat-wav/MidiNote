@@ -37,7 +37,7 @@ export class TR909Snare {
 
         // Micro-randomization
         const drift = (Math.random() * 2 - 1) * 1.0; // +/- 1Hz drift
-        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // research: ~200ms
         const snappyDecayBase = 0.1 + snappy * 0.4;
         const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
@@ -60,7 +60,7 @@ export class TR909Snare {
         postShaperGain.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        // Pitch Sweep: ~300Hz to ~160Hz over 30ms (as per research)
+        // Pitch Sweep: ~300Hz to ~160Hz over 30ms (research: 20-30ms)
         const sweepTime = 0.03;
         const startFreq1 = 300 + drift;
         const startFreq2 = 330 + drift;
@@ -75,8 +75,8 @@ export class TR909Snare {
 
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const hpf = new Tone.Filter(1000 * filterVariance, "highpass"); // HPF to protect fundamental
-        // LPF controlled by 'Tone' (pitch parameter here), range 4kHz to 8kHz
+        const hpf = new Tone.Filter(1000 * filterVariance, "highpass"); // research: ~1000Hz
+        // LPF controlled by 'Tone' (pitch parameter here), range 4kHz to 8kHz (research: 4000Hz - 8000Hz)
         const lpf = new Tone.Filter((4000 + pitch * 4000) * filterVariance, "lowpass");
         const noiseGain = new Tone.Gain(0);
 

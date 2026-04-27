@@ -16,11 +16,12 @@ export class TR808HiHat {
         // Pitch Multiplier (0.8x to 1.2x)
         const pitchMultiplier = 0.8 + pitch * 0.4;
 
+        // Micro-randomization
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
 
         // Create 6 Square Wave Oscillators (Schmitt Trigger Matrix)
         const oscillators = this.frequencies.map(freq => {
-            const drift = (Math.random() - 0.5) * 4; // Analog drift
+            const drift = (Math.random() * 2 - 1) * 1.0; // Standardized Analog drift +/- 1Hz
             const osc = new Tone.Oscillator(freq * pitchMultiplier + drift, "square");
             osc.phase = Math.random() * 360;
             osc.connect(mixGain);

@@ -19,8 +19,8 @@ export class TR808Snare {
 
         // Micro-randomization
         const drift = (Math.random() * 2 - 1) * 1.0; // +/- 1Hz drift
-        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
-        const snappyDecayBase = 0.25 + snappy * 0.15;
+        const tonalDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // research: ~200ms
+        const snappyDecayBase = 0.25 + snappy * 0.15; // research: 0.25 - 0.4s
         const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
         const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
 
@@ -40,18 +40,18 @@ export class TR808Snare {
 
         // Independent envelopes for authenticity: High mode decays faster
         gainLow.gain.setValueAtTime(velocity * (1 - toneBalance), time);
-        gainLow.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
+        gainLow.gain.exponentialRampToValueAtTime(0.001, time + tonalDecay);
 
         gainHigh.gain.setValueAtTime(velocity * toneBalance, time);
-        gainHigh.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay * 0.75);
+        gainHigh.gain.exponentialRampToValueAtTime(0.001, time + tonalDecay * 0.75);
 
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        // High-pass filter (>1800Hz) to prevent phase trap with tonal body
+        // High-pass filter (>1800Hz) to prevent phase trap with tonal body (research: 1800Hz - 2500Hz)
         const noiseFilter = new Tone.Filter({
             frequency: 1800 * filterVariance,
             type: "highpass",
-            Q: 0.707
+            Q: 0.707 // Butterworth
         });
         const snappyGain = new Tone.Gain(0);
 
@@ -62,8 +62,8 @@ export class TR808Snare {
         snappyGain.gain.setValueAtTime(velocity * 0.8, time);
         snappyGain.gain.exponentialRampToValueAtTime(0.001, time + snappyDecay);
 
-        oscLow.start(time).stop(time + vcaDecay);
-        oscHigh.start(time).stop(time + vcaDecay);
+        oscLow.start(time).stop(time + tonalDecay);
+        oscHigh.start(time).stop(time + tonalDecay);
         noiseSrc.start(time).stop(time + snappyDecay + 0.1);
 
         // Cleanup

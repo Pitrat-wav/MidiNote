@@ -9,7 +9,7 @@ export class TR808Kick {
         // decay: 0.5 -> 1.7s, maps to 0.4-3.0s range
         const decayTime = 0.4 + decay * 2.6;
 
-        // 808 Kick Core: Bridged-T Network emulation
+        // 808 Kick Core: Bridged-T Network emulation (Sine wave)
         const osc = new Tone.Oscillator(tune, "sine");
         osc.phase = Math.random() * 360; // Analog phase randomization
         const masterGain = new Tone.Gain(0);
@@ -23,6 +23,7 @@ export class TR808Kick {
         const finalDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02));
 
         // Pitch Envelope: Start high (Tune * 2.5) and drop quickly (50ms) to simulate the membrane hit ('tonk')
+        // This rapid sweep generates the punch without needing a separate click oscillator
         const startFreq = (tune * 2.5) + drift;
         const endFreq = tune + drift;
 
@@ -33,26 +34,11 @@ export class TR808Kick {
         masterGain.gain.setValueAtTime(velocity, time);
         masterGain.gain.exponentialRampToValueAtTime(0.001, time + finalDecay);
 
-        // Click Layer: Fast Pitch Sweep (5ms) for the 'tonk' attack
-        const clickOsc = new Tone.Oscillator(tune * 5, "sine");
-        const clickGain = new Tone.Gain(0);
-        clickOsc.connect(clickGain);
-        clickGain.connect(this.destination);
-
-        clickOsc.frequency.setValueAtTime(tune * 5, time);
-        clickOsc.frequency.exponentialRampToValueAtTime(tune, time + 0.005);
-
-        clickGain.gain.setValueAtTime(velocity, time);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.005);
-
         osc.start(time).stop(time + finalDecay);
-        clickOsc.start(time).stop(time + 0.005);
 
         osc.onstop = () => {
             osc.dispose();
             masterGain.dispose();
-            clickOsc.dispose();
-            clickGain.dispose();
         };
     }
 }

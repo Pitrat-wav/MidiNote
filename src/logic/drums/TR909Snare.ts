@@ -60,10 +60,10 @@ export class TR909Snare {
         postShaperGain.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        // Pitch Sweep: ~300Hz to ~160Hz over 30ms (as per research)
-        const sweepTime = 0.03;
-        const startFreq1 = 300 + drift;
-        const startFreq2 = 330 + drift;
+        // Pitch Sweep: ~320Hz to ~160Hz over 50ms (as per research example)
+        const sweepTime = 0.05;
+        const startFreq1 = freq1 * 2 + drift;
+        const startFreq2 = freq2 * 2 + drift;
 
         osc1.frequency.setValueAtTime(startFreq1, time);
         osc1.frequency.exponentialRampToValueAtTime(freq1 + drift, time + sweepTime);
@@ -76,8 +76,9 @@ export class TR909Snare {
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
         const hpf = new Tone.Filter(1000 * filterVariance, "highpass"); // HPF to protect fundamental
-        // LPF controlled by 'Tone' (pitch parameter here), range 4kHz to 8kHz
-        const lpf = new Tone.Filter((4000 + pitch * 4000) * filterVariance, "lowpass");
+        // LPF controlled by 'Tone' (pitch parameter here), range 4kHz to 8kHz (research: toneCutoff)
+        const toneCutoff = 4000 + pitch * 4000;
+        const lpf = new Tone.Filter(toneCutoff * filterVariance, "lowpass");
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(hpf);

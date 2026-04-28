@@ -38,7 +38,8 @@ export class TR808Snare {
         gainLow.connect(this.destination);
         gainHigh.connect(this.destination);
 
-        // Independent envelopes for authenticity: High mode decays faster
+        // Independent envelopes for maximum authenticity as per research
+        // High mode decays faster (approx 75% of low mode decay)
         gainLow.gain.setValueAtTime(velocity * (1 - toneBalance), time);
         gainLow.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
@@ -48,6 +49,7 @@ export class TR808Snare {
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
         // High-pass filter (>1800Hz) to prevent phase trap with tonal body
+        // Q = 0.707 (Butterworth)
         const noiseFilter = new Tone.Filter({
             frequency: 1800 * filterVariance,
             type: "highpass",

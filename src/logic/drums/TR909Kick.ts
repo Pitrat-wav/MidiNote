@@ -30,8 +30,11 @@ export class TR909Kick {
     }
 
     trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
-        // pitch: 0.5 -> 50Hz, maps to 45-55Hz
-        const tune = 45 + pitch * 10;
+        // 909 Kick base frequency is fixed around 50Hz
+        const tune = 50;
+        // The 'Pitch' parameter on 909 maps to the frequency sweep duration
+        // Range: 0.05s to 0.15s
+        const sweepDuration = 0.05 + pitch * 0.1;
         // decay: 0.5 -> 0.45s, maps to 0.3-0.6s
         const decayTime = 0.3 + decay * 0.3;
 
@@ -53,12 +56,12 @@ export class TR909Kick {
         bodyFilter.connect(bodyGain);
         bodyGain.connect(this.destination);
 
-        // Aggressive Pitch Envelope: Start at Tune * 4.7 (~235Hz) and drop over 100ms
+        // Aggressive Pitch Envelope: Start at Tune * 4.7 (~235Hz) and drop over sweepDuration
         const startFreq = tune * 4.7 + drift;
         const endFreq = tune + drift;
 
         bodyOsc.frequency.setValueAtTime(startFreq, time);
-        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.1);
+        bodyOsc.frequency.exponentialRampToValueAtTime(endFreq, time + sweepDuration);
 
         // VCA Envelope
         bodyGain.gain.setValueAtTime(velocity, time);
@@ -79,7 +82,7 @@ export class TR909Kick {
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 
         // Rectangular Pulse Click: Short 5ms impulse for attack articulation
-        const pulseOsc = new Tone.Oscillator(0, "square");
+        const pulseOsc = new Tone.Oscillator(100, "square"); // Research: 100Hz square wave pulse
         const pulseGain = new Tone.Gain(0);
         pulseOsc.connect(pulseGain);
         pulseGain.connect(this.destination);

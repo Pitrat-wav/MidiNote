@@ -16,7 +16,7 @@ export class TR808HiHat {
         // Pitch Multiplier (0.8x to 1.2x)
         const pitchMultiplier = 0.8 + pitch * 0.4;
 
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
+        const filterVariance = 1 + (Math.random() * 0.06 - 0.03); // +/- 3% filter
 
         // Create 6 Square Wave Oscillators (Schmitt Trigger Matrix)
         const oscillators = this.frequencies.map(freq => {
@@ -45,7 +45,7 @@ export class TR808HiHat {
 
         // Decay: Closed Hat (40-60ms), Open Hat (300-500ms)
         const decayBase = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
-        const decayTime = decayBase * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const decayTime = decayBase * (1 + (Math.random() * 0.06 - 0.03)); // +/- 3% decay
 
         // VCA Envelope
         envGain.gain.setValueAtTime(velocity, time);

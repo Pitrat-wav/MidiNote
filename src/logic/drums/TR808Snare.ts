@@ -19,10 +19,10 @@ export class TR808Snare {
 
         // Micro-randomization
         const drift = (Math.random() * 2 - 1) * 1.0; // +/- 1Hz drift
-        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const vcaDecay = 0.2 * (1 + (Math.random() * 0.06 - 0.03)); // +/- 3% decay
         const snappyDecayBase = 0.25 + snappy * 0.15;
-        const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
+        const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.06 - 0.03));
+        const filterVariance = 1 + (Math.random() * 0.06 - 0.03);
 
         // 808 Membrane modes: fixed at ~238Hz and ~476Hz according to research
         const oscLow = new Tone.Oscillator(238 + drift, "sine");

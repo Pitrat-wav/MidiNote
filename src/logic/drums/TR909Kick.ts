@@ -40,8 +40,8 @@ export class TR909Kick {
 
         // Micro-randomization
         const drift = (Math.random() * 2 - 1) * 0.5; // +/- 0.5Hz drift
-        const vcaDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
+        const vcaDecay = decayTime * (1 + (Math.random() * 0.06 - 0.03)); // +/- 3% decay
+        const filterVariance = 1 + (Math.random() * 0.06 - 0.03); // +/- 3% filter
 
         // 909 Kick Body: Triangle Oscillator with saturation and Low-Pass smoothing
         const bodyOsc = new Tone.Oscillator(tune * 4.7 + drift, "triangle");
@@ -77,7 +77,7 @@ export class TR909Kick {
         noiseGain.connect(this.destination);
 
         // Ultra short envelope (10-20ms) for the click
-        const clickDecay = 0.02 * (1 + (Math.random() * 0.04 - 0.02));
+        const clickDecay = 0.02 * (1 + (Math.random() * 0.06 - 0.03));
         noiseGain.gain.setValueAtTime(velocity * 0.7, time);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, time + clickDecay);
 

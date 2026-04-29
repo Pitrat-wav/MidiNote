@@ -39,8 +39,8 @@ export class TR909Snare {
         const drift = (Math.random() * 2 - 1) * 1.0; // +/- 1Hz drift
         const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
         const snappyDecayBase = 0.1 + snappy * 0.4;
-        const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
+        const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.06 - 0.03)); // +/- 3% decay
+        const filterVariance = 1 + (Math.random() * 0.06 - 0.03); // +/- 3% filter
 
         const osc1 = new Tone.Oscillator(freq1 * 2 + drift, "triangle");
         const osc2 = new Tone.Oscillator(freq2 * 2 + drift, "triangle");
@@ -60,8 +60,8 @@ export class TR909Snare {
         postShaperGain.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        // Pitch Sweep: ~320Hz to ~160Hz over 50ms (as per research example)
-        const sweepTime = 0.05;
+        // Pitch Sweep: ~320Hz to ~160Hz over 30ms (as per research example)
+        const sweepTime = 0.03;
         const startFreq1 = freq1 * 2 + drift;
         const startFreq2 = freq2 * 2 + drift;
 

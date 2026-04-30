@@ -1,4 +1,5 @@
 import * as Tone from 'tone'
+import { applyPitchDrift, applyVariance } from '../DrumUtils'
 
 export class TR808Snare {
     private noiseBuffer: AudioBuffer;
@@ -17,16 +18,15 @@ export class TR808Snare {
         // pitch maps to tone balance here (balance between low and high modes)
         const toneBalance = pitch;
 
-        // Micro-randomization
-        const drift = (Math.random() * 2 - 1) * 1.0; // +/- 1Hz drift
-        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        // Micro-randomization using shared utilities
+        const vcaDecay = applyVariance(0.2, 0.02);
         const snappyDecayBase = 0.25 + snappy * 0.15;
-        const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
+        const snappyDecay = applyVariance(snappyDecayBase, 0.02);
+        const noiseFilterFreq = applyVariance(1800, 0.02);
 
         // 808 Membrane modes: fixed at ~238Hz and ~476Hz according to research
-        const oscLow = new Tone.Oscillator(238 + drift, "sine");
-        const oscHigh = new Tone.Oscillator(476 + drift, "sine");
+        const oscLow = new Tone.Oscillator(applyPitchDrift(238, 1.0), "sine");
+        const oscHigh = new Tone.Oscillator(applyPitchDrift(476, 1.0), "sine");
         oscLow.phase = Math.random() * 360;
         oscHigh.phase = Math.random() * 360;
 
@@ -51,7 +51,7 @@ export class TR808Snare {
         // High-pass filter (>1800Hz) to prevent phase trap with tonal body
         // Q = 0.707 (Butterworth)
         const noiseFilter = new Tone.Filter({
-            frequency: 1800 * filterVariance,
+            frequency: noiseFilterFreq,
             type: "highpass",
             Q: 0.707
         });

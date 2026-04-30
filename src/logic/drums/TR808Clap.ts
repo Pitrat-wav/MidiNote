@@ -1,4 +1,5 @@
 import * as Tone from 'tone'
+import { applyVariance } from '../DrumUtils'
 
 export class TR808Clap {
     private noiseBuffer: AudioBuffer;
@@ -12,8 +13,8 @@ export class TR808Clap {
 
     trigger(time: number, pitch: number, decay: number, velocity: number = 0.8) {
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
-        const bpf = new Tone.Filter((1000 + pitch * 1000) * filterVariance, "bandpass");
+        const bpfFreq = (1000 + pitch * 1000);
+        const bpf = new Tone.Filter(applyVariance(bpfFreq, 0.02), "bandpass");
         const gain = new Tone.Gain(0).connect(this.destination);
 
         noiseSrc.connect(bpf);
@@ -22,7 +23,7 @@ export class TR808Clap {
         // Triple attack "snaps"
         const snapCount = 3;
         const snapIntervalBase = 0.01;
-        const snapInterval = snapIntervalBase * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% interval
+        const snapInterval = applyVariance(snapIntervalBase, 0.02);
 
         for (let i = 0; i < snapCount; i++) {
             const snapTime = time + i * snapInterval;
@@ -33,7 +34,7 @@ export class TR808Clap {
         // Final decay
         const finalDecayStart = time + snapCount * snapInterval;
         const decayTimeBase = 0.1 + decay * 0.5;
-        const decayTime = decayTimeBase * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const decayTime = applyVariance(decayTimeBase, 0.02);
 
         gain.gain.setValueAtTime(velocity, finalDecayStart);
         gain.gain.exponentialRampToValueAtTime(0.001, finalDecayStart + decayTime);

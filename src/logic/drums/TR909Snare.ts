@@ -1,4 +1,5 @@
 import * as Tone from 'tone'
+import { makeDistortionCurve, applyPitchDrift, applyVariance } from '../DrumUtils'
 
 export class TR909Snare {
     private noiseBuffer: AudioBuffer;
@@ -6,7 +7,7 @@ export class TR909Snare {
 
     constructor(private destination: Tone.ToneAudioNode) {
         // Soft Clipping curve from research
-        this.bodyCurve = this.makeDistortionCurve(15);
+        this.bodyCurve = makeDistortionCurve(15);
 
         const sampleRate = Tone.getContext().sampleRate;
         const bufferSize = sampleRate * 0.5;
@@ -18,32 +19,21 @@ export class TR909Snare {
         }
     }
 
-    private makeDistortionCurve(amount: number) {
-        const k = amount;
-        const n_samples = 4096;
-        const curve = new Float32Array(n_samples);
-        const deg = Math.PI / 180;
-        for (let i = 0; i < n_samples; ++i) {
-            let x = i * 2 / n_samples - 1;
-            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
-        }
-        return curve;
-    }
-
     trigger(time: number, pitch: number, snappy: number, velocity: number = 0.8) {
         // 909 Snare Body: 2 triangle oscillators fixed at ~160Hz and ~220Hz
         const freq1 = 160;
         const freq2 = 220;
 
-        // Micro-randomization
-        const drift = (Math.random() * 2 - 1) * 1.0; // +/- 1Hz drift
-        const vcaDecay = 0.2 * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        // Micro-randomization using shared utilities
+        const vcaDecay = applyVariance(0.2, 0.02);
         const snappyDecayBase = 0.1 + snappy * 0.4;
-        const snappyDecay = snappyDecayBase * (1 + (Math.random() * 0.04 - 0.02));
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02);
+        const snappyDecay = applyVariance(snappyDecayBase, 0.02);
+        const noiseHPFFreq = applyVariance(1000, 0.02);
+        const toneDrift1 = applyPitchDrift(freq1, 1.0);
+        const toneDrift2 = applyPitchDrift(freq2, 1.0);
 
-        const osc1 = new Tone.Oscillator(freq1 * 2 + drift, "triangle");
-        const osc2 = new Tone.Oscillator(freq2 * 2 + drift, "triangle");
+        const osc1 = new Tone.Oscillator(toneDrift1 * 2, "triangle");
+        const osc2 = new Tone.Oscillator(toneDrift2 * 2, "triangle");
         osc1.phase = Math.random() * 360;
         osc2.phase = Math.random() * 360;
         // Routing with gain compensation to prevent clipping before the shaper
@@ -60,25 +50,25 @@ export class TR909Snare {
         postShaperGain.connect(tonalGain);
         tonalGain.connect(this.destination);
 
-        // Pitch Sweep: ~320Hz to ~160Hz over 50ms (as per research example)
-        const sweepTime = 0.05;
-        const startFreq1 = freq1 * 2 + drift;
-        const startFreq2 = freq2 * 2 + drift;
+        // Pitch Sweep: ~320Hz to ~160Hz over 30ms (as per research spec)
+        const sweepTime = 0.03;
+        const startFreq1 = toneDrift1 * 2;
+        const startFreq2 = toneDrift2 * 2;
 
         osc1.frequency.setValueAtTime(startFreq1, time);
-        osc1.frequency.exponentialRampToValueAtTime(freq1 + drift, time + sweepTime);
+        osc1.frequency.exponentialRampToValueAtTime(toneDrift1, time + sweepTime);
         osc2.frequency.setValueAtTime(startFreq2, time);
-        osc2.frequency.exponentialRampToValueAtTime(freq2 + drift, time + sweepTime);
+        osc2.frequency.exponentialRampToValueAtTime(toneDrift2, time + sweepTime);
 
         tonalGain.gain.setValueAtTime(velocity, time);
         tonalGain.gain.exponentialRampToValueAtTime(0.001, time + vcaDecay);
 
         // Snappy Layer
         const noiseSrc = new Tone.BufferSource(this.noiseBuffer);
-        const hpf = new Tone.Filter(1000 * filterVariance, "highpass"); // HPF to protect fundamental
+        const hpf = new Tone.Filter(noiseHPFFreq, "highpass"); // HPF to protect fundamental
         // LPF controlled by 'Tone' (pitch parameter here), range 4kHz to 8kHz (research: toneCutoff)
         const toneCutoff = 4000 + pitch * 4000;
-        const lpf = new Tone.Filter(toneCutoff * filterVariance, "lowpass");
+        const lpf = new Tone.Filter(applyVariance(toneCutoff, 0.02), "lowpass");
         const noiseGain = new Tone.Gain(0);
 
         noiseSrc.connect(hpf);

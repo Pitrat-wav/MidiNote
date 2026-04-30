@@ -1,4 +1,5 @@
 import * as Tone from 'tone'
+import { applyPitchDrift, applyVariance } from '../DrumUtils'
 
 export class TR808HiHat {
     private frequencies = [205.3, 304.4, 369.6, 522.7, 800, 540];
@@ -16,12 +17,10 @@ export class TR808HiHat {
         // Pitch Multiplier (0.8x to 1.2x)
         const pitchMultiplier = 0.8 + pitch * 0.4;
 
-        const filterVariance = 1 + (Math.random() * 0.04 - 0.02); // +/- 2% filter
-
         // Create 6 Square Wave Oscillators (Schmitt Trigger Matrix)
         const oscillators = this.frequencies.map(freq => {
-            const drift = (Math.random() - 0.5) * 4; // Analog drift
-            const osc = new Tone.Oscillator(freq * pitchMultiplier + drift, "square");
+            const driftedFreq = applyPitchDrift(freq * pitchMultiplier, 2.0); // +/- 2Hz drift for hats
+            const osc = new Tone.Oscillator(driftedFreq, "square");
             osc.phase = Math.random() * 360;
             osc.connect(mixGain);
             return osc;
@@ -36,16 +35,16 @@ export class TR808HiHat {
         envGain.connect(hpf);
         hpf.connect(this.destination);
 
-        // Filter Q values
+        // Filter Q values and randomization
         bpf1.Q.value = 1.5;
         bpf2.Q.value = 1.5;
-        bpf1.frequency.value = 3440 * filterVariance;
-        bpf2.frequency.value = 7100 * filterVariance;
-        hpf.frequency.value = 7000 * filterVariance;
+        bpf1.frequency.value = applyVariance(3440, 0.02);
+        bpf2.frequency.value = applyVariance(7100, 0.02);
+        hpf.frequency.value = applyVariance(7000, 0.02);
 
         // Decay: Closed Hat (40-60ms), Open Hat (300-500ms)
         const decayBase = isOpen ? (0.3 + decay * 0.2) : (0.04 + decay * 0.02);
-        const decayTime = decayBase * (1 + (Math.random() * 0.04 - 0.02)); // +/- 2% decay
+        const decayTime = applyVariance(decayBase, 0.02);
 
         // VCA Envelope
         envGain.gain.setValueAtTime(velocity, time);

@@ -5,6 +5,7 @@ import { TR808Snare } from './drums/TR808Snare'
 import { TR909Snare } from './drums/TR909Snare'
 import { TR808HiHat } from './drums/TR808HiHat'
 import { TR808Clap } from './drums/TR808Clap'
+import { makeDistortionCurve } from './DrumUtils'
 
 export class DrumMachine {
     comp: Tone.Compressor
@@ -42,7 +43,7 @@ export class DrumMachine {
 
     constructor() {
         this.comp = new Tone.Compressor(-24, 4)
-        this.shaper = new Tone.WaveShaper(this.makeDistortionCurve(20))
+        this.shaper = new Tone.WaveShaper(makeDistortionCurve(20))
         this.shaper.oversample = '4x'
         this.output = new Tone.Gain(1)
         this.outputKick = new Tone.Gain(1)
@@ -77,20 +78,8 @@ export class DrumMachine {
         }
     }
 
-    private makeDistortionCurve(amount: number) {
-        const k = amount
-        const n_samples = 44100
-        const curve = new Float32Array(n_samples)
-        const deg = Math.PI / 180
-        for (let i = 0; i < n_samples; ++i) {
-            let x = i * 2 / n_samples - 1
-            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x))
-        }
-        return curve
-    }
-
     setSaturation(amount: number) {
-        this.shaper.curve = this.makeDistortionCurve(amount)
+        this.shaper.curve = makeDistortionCurve(amount)
     }
 
     setKit(kit: '808' | '909') {

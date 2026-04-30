@@ -1,4 +1,5 @@
 import * as Tone from 'tone'
+import { applyPitchDrift, applyVariance } from '../DrumUtils'
 
 export class TR808Kick {
     constructor(private destination: Tone.ToneAudioNode) { }
@@ -17,15 +18,14 @@ export class TR808Kick {
         osc.connect(masterGain);
         masterGain.connect(this.destination);
 
-        // Micro-randomization: Pitch Drift (+/- 1Hz)
-        const drift = (Math.random() * 2 - 1) * 1.0;
-        // VCA Decay variance (+/- 2%)
-        const finalDecay = decayTime * (1 + (Math.random() * 0.04 - 0.02));
+        // Micro-randomization using shared utilities
+        const tuneDrift = applyPitchDrift(tune, 1.0);
+        const finalDecay = applyVariance(decayTime, 0.02);
 
         // Pitch Envelope: Start high (Tune * 2.5) and drop quickly (50ms) to simulate the membrane hit ('tonk')
         // This rapid sweep generates the punch without needing a separate click oscillator
-        const startFreq = (tune * 2.5) + drift;
-        const endFreq = tune + drift;
+        const startFreq = tuneDrift * 2.5;
+        const endFreq = tuneDrift;
 
         osc.frequency.setValueAtTime(startFreq, time);
         osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.05);

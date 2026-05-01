@@ -30,8 +30,10 @@ export class TR808Kick {
         osc.frequency.setValueAtTime(startFreq, time);
         osc.frequency.exponentialRampToValueAtTime(endFreq, time + 0.05);
 
-        // VCA Amp Envelope: Instant attack, adjustable exponential decay
+        // VCA Amp Envelope: Accelerated initial decay (diode damping) + main exponential decay
+        const dampingTime = 0.02; // 20ms initial punch
         masterGain.gain.setValueAtTime(velocity, time);
+        masterGain.gain.exponentialRampToValueAtTime(velocity * 0.5, time + dampingTime);
         masterGain.gain.exponentialRampToValueAtTime(0.001, time + finalDecay);
 
         osc.start(time).stop(time + finalDecay);

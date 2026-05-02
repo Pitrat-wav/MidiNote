@@ -3,8 +3,18 @@ import { applyPitchDrift, applyVariance } from '../DrumUtils'
 
 export class TR808HiHat {
     private frequencies = [205.3, 304.4, 369.6, 522.7, 800, 540];
+    private activeNodes: { oscillators: Tone.Oscillator[], envGain: Tone.Gain }[] = [];
 
     constructor(private destination: Tone.ToneAudioNode) { }
+
+    stop(time: number) {
+        this.activeNodes.forEach(group => {
+            group.envGain.gain.cancelAndHoldAtTime(time);
+            group.envGain.gain.exponentialRampToValueAtTime(0.001, time + 0.01);
+            group.oscillators.forEach(osc => osc.stop(time + 0.015));
+        });
+        this.activeNodes = [];
+    }
 
     trigger(time: number, isOpen: boolean, pitch: number, decay: number, velocity: number = 0.8) {
         // Create nodes
@@ -25,6 +35,10 @@ export class TR808HiHat {
             osc.connect(mixGain);
             return osc;
         });
+
+        // Store active nodes for potential choking
+        const group = { oscillators, envGain };
+        this.activeNodes.push(group);
 
         // Routing Graph
         // Oscillators -> MixGain -> [BPF1, BPF2] (Parallel) -> EnvGain -> HPF -> Destination
@@ -56,7 +70,6 @@ export class TR808HiHat {
         });
 
         // Disposal - Explicitly clean up all 11-12 nodes to prevent memory leaks
-        // We use the first oscillator's onstop event to trigger the cleanup
         oscillators[0].onstop = () => {
             oscillators.forEach(o => o.dispose());
             mixGain.dispose();
@@ -64,6 +77,8 @@ export class TR808HiHat {
             bpf2.dispose();
             envGain.dispose();
             hpf.dispose();
+            // Remove from active groups
+            this.activeNodes = this.activeNodes.filter(g => g !== group);
         };
     }
 }

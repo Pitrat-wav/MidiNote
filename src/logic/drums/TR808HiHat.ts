@@ -3,8 +3,20 @@ import { applyPitchDrift, applyVariance } from '../DrumUtils'
 
 export class TR808HiHat {
     private frequencies = [205.3, 304.4, 369.6, 522.7, 800, 540];
+    private activeOscillators: Tone.Oscillator[] = [];
 
     constructor(private destination: Tone.ToneAudioNode) { }
+
+    stop(time: number) {
+        this.activeOscillators.forEach(osc => {
+            try {
+                osc.stop(time);
+            } catch (e) {
+                // Ignore if already stopped
+            }
+        });
+        this.activeOscillators = [];
+    }
 
     trigger(time: number, isOpen: boolean, pitch: number, decay: number, velocity: number = 0.8) {
         // Create nodes
@@ -25,6 +37,8 @@ export class TR808HiHat {
             osc.connect(mixGain);
             return osc;
         });
+
+        this.activeOscillators.push(...oscillators);
 
         // Routing Graph
         // Oscillators -> MixGain -> [BPF1, BPF2] (Parallel) -> EnvGain -> HPF -> Destination
@@ -58,6 +72,9 @@ export class TR808HiHat {
         // Disposal - Explicitly clean up all 11-12 nodes to prevent memory leaks
         // We use the first oscillator's onstop event to trigger the cleanup
         oscillators[0].onstop = () => {
+            // Remove from active oscillators list
+            this.activeOscillators = this.activeOscillators.filter(o => !oscillators.includes(o));
+
             oscillators.forEach(o => o.dispose());
             mixGain.dispose();
             bpf1.dispose();

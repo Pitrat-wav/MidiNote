@@ -3,8 +3,19 @@ import { applyPitchDrift, applyVariance } from '../DrumUtils'
 
 export class TR808HiHat {
     private frequencies = [205.3, 304.4, 369.6, 522.7, 800, 540];
+    private activeGains: Tone.Gain[] = [];
 
     constructor(private destination: Tone.ToneAudioNode) { }
+
+    stop(time: number) {
+        // Ramp down all active instances for hi-hat choking
+        this.activeGains.forEach(gain => {
+            gain.gain.cancelScheduledValues(time);
+            gain.gain.setValueAtTime(gain.gain.value, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+        });
+        this.activeGains = [];
+    }
 
     trigger(time: number, isOpen: boolean, pitch: number, decay: number, velocity: number = 0.8) {
         // Create nodes
@@ -50,6 +61,8 @@ export class TR808HiHat {
         envGain.gain.setValueAtTime(velocity, time);
         envGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
+        this.activeGains.push(envGain);
+
         // Scheduling
         oscillators.forEach(osc => {
             osc.start(time).stop(time + decayTime);
@@ -62,6 +75,11 @@ export class TR808HiHat {
             mixGain.dispose();
             bpf1.dispose();
             bpf2.dispose();
+
+            // Remove from active gains before disposal
+            const index = this.activeGains.indexOf(envGain);
+            if (index > -1) this.activeGains.splice(index, 1);
+
             envGain.dispose();
             hpf.dispose();
         };

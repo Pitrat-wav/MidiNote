@@ -21,7 +21,7 @@ export function SequencerLoop() {
 
     // Pattern Cache to optimize performance
     const drumPatternsRef = useRef<Record<string, number[]>>({
-        kick: [], snare: [], hihat: [], hihatOpen: [], clap: []
+        kick: [], snare: [], hihat: [], hihatOpen: [], clap: [], cowbell: []
     })
 
     useEffect(() => {
@@ -42,7 +42,8 @@ export function SequencerLoop() {
                 snare: rotateArray(bjorklund(d.snare.steps, d.snare.pulses), d.snare.rotate),
                 hihat: rotateArray(bjorklund(d.hihat.steps, d.hihat.pulses), d.hihat.rotate),
                 hihatOpen: rotateArray(bjorklund(d.hihatOpen.steps, d.hihatOpen.pulses), d.hihatOpen.rotate),
-                clap: rotateArray(bjorklund(d.clap.steps, d.clap.pulses), d.clap.rotate)
+                clap: rotateArray(bjorklund(d.clap.steps, d.clap.pulses), d.clap.rotate),
+                cowbell: rotateArray(bjorklund(d.cowbell.steps, d.cowbell.pulses), d.cowbell.rotate)
             }
         }
 
@@ -67,11 +68,21 @@ export function SequencerLoop() {
             const patterns = drumPatternsRef.current
             const getVel = () => 0.7 + Math.random() * 0.3 // Randomize velocity 0.7 - 1.0
 
-            if (patterns.kick[step % patterns.kick.length]) drumMachine.triggerDrum('kick', time, getVel())
-            if (patterns.snare[step % patterns.snare.length]) drumMachine.triggerDrum('snare', time, getVel())
-            if (patterns.hihat[step % patterns.hihat.length]) drumMachine.triggerDrum('hihat', time, getVel())
-            if (patterns.hihatOpen[step % patterns.hihatOpen.length]) drumMachine.triggerDrum('hihatOpen', time, getVel())
-            if (patterns.clap[step % patterns.clap.length]) drumMachine.triggerDrum('clap', time, getVel())
+            const dState = useDrumStore.getState()
+            const triggerWithProb = (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap' | 'cowbell') => {
+                if (patterns[drum][step % patterns[drum].length]) {
+                    if (Math.random() < dState[drum].probability) {
+                        drumMachine.triggerDrum(drum, time, getVel())
+                    }
+                }
+            }
+
+            triggerWithProb('kick')
+            triggerWithProb('snare')
+            triggerWithProb('hihat')
+            triggerWithProb('hihatOpen')
+            triggerWithProb('clap')
+            triggerWithProb('cowbell')
 
             // 2. Bass (Sting logic)
             const bassStep = currentBass.pattern[step]

@@ -21,24 +21,26 @@ export const useHarmonyStore = create<HarmonyState>((set) => ({
 
 // Drum Store
 interface DrumState {
-    kick: { steps: number, pulses: number, rotate: number, decay: number, pitch: number }
-    snare: { steps: number, pulses: number, rotate: number, decay: number, pitch: number }
-    hihat: { steps: number, pulses: number, rotate: number, decay: number, pitch: number }
-    hihatOpen: { steps: number, pulses: number, rotate: number, decay: number, pitch: number }
-    clap: { steps: number, pulses: number, rotate: number, decay: number, pitch: number }
+    kick: { steps: number, pulses: number, rotate: number, decay: number, pitch: number, probability: number }
+    snare: { steps: number, pulses: number, rotate: number, decay: number, pitch: number, probability: number }
+    hihat: { steps: number, pulses: number, rotate: number, decay: number, pitch: number, probability: number }
+    hihatOpen: { steps: number, pulses: number, rotate: number, decay: number, pitch: number, probability: number }
+    clap: { steps: number, pulses: number, rotate: number, decay: number, pitch: number, probability: number }
+    cowbell: { steps: number, pulses: number, rotate: number, decay: number, pitch: number, probability: number }
     kit: '808' | '909'
     drive: number
-    setParams: (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', params: Partial<{ steps: number, pulses: number, rotate: number, decay: number, pitch: number }>) => void
+    setParams: (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap' | 'cowbell', params: Partial<{ steps: number, pulses: number, rotate: number, decay: number, pitch: number, probability: number }>) => void
     setKit: (kit: '808' | '909') => void
     setDrive: (drive: number) => void
 }
 
 export const useDrumStore = create<DrumState>((set) => ({
-    kick: { steps: 16, pulses: 4, rotate: 0, decay: 0.5, pitch: 0.5 },
-    snare: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
-    hihat: { steps: 16, pulses: 12, rotate: 0, decay: 0.5, pitch: 0.5 },
-    hihatOpen: { steps: 16, pulses: 4, rotate: 2, decay: 0.5, pitch: 0.5 },
-    clap: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5 },
+    kick: { steps: 16, pulses: 4, rotate: 0, decay: 0.5, pitch: 0.5, probability: 1.0 },
+    snare: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5, probability: 1.0 },
+    hihat: { steps: 16, pulses: 12, rotate: 0, decay: 0.5, pitch: 0.5, probability: 1.0 },
+    hihatOpen: { steps: 16, pulses: 4, rotate: 2, decay: 0.5, pitch: 0.5, probability: 1.0 },
+    clap: { steps: 16, pulses: 2, rotate: 4, decay: 0.5, pitch: 0.5, probability: 1.0 },
+    cowbell: { steps: 16, pulses: 2, rotate: 0, decay: 0.5, pitch: 0.5, probability: 1.0 },
     kit: '909',
     drive: 20,
     setParams: (drum, params) => set((state) => ({

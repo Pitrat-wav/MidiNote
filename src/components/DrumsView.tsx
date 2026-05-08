@@ -11,10 +11,10 @@ export function DrumsView() {
     const { kick, snare, hihat, hihatOpen, clap, kit, drive, setParams, setKit, setDrive } = useDrumStore()
     const { drumMachine, volumes, setVolume } = useAudioStore()
 
-    const updateDrum = (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', params: any) => {
+    const updateDrum = (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap' | 'cowbell', params: any) => {
         setParams(drum, params)
         if (drumMachine) {
-            const d = useDrumStore.getState()[drum]
+            const d = useDrumStore.getState()[drum as keyof ReturnType<typeof useDrumStore.getState>] as any
             const finalParams = { ...d, ...params }
             drumMachine.setDrumParams(drum, finalParams.pitch, finalParams.decay)
         }
@@ -70,7 +70,8 @@ export function DrumsView() {
                         { id: 'snare' as const, label: 'SNARE' },
                         { id: 'hihat' as const, label: 'HI-HAT' },
                         { id: 'hihatOpen' as const, label: 'OPEN HAT' },
-                        { id: 'clap' as const, label: 'CLAP' }
+                        { id: 'clap' as const, label: 'CLAP' },
+                        { id: 'cowbell' as const, label: 'COWBELL' }
                     ].map(d => (
                         <div key={d.id} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', background: 'rgba(0,0,0,0.02)', padding: '12px', borderRadius: '12px' }}>
                             <div style={{ width: '60px', fontWeight: 'bold', fontSize: '10px' }}>{d.label}</div>
@@ -96,6 +97,13 @@ export function DrumsView() {
                                 size={40}
                             />
                             <Knob
+                                label="PROB"
+                                value={useDrumStore((state) => state[d.id].probability)}
+                                min={0} max={1} step={0.01}
+                                onChange={(v) => updateDrum(d.id, { probability: v })}
+                                size={40}
+                            />
+                            <Knob
                                 label="Vol"
                                 value={volumes[d.id]}
                                 min={0} max={1} step={0.01}
@@ -113,7 +121,8 @@ export function DrumsView() {
                         { name: 'SNARE', data: snare },
                         { name: 'HIHAT', data: hihat },
                         { name: 'OPEN', data: hihatOpen },
-                        { name: 'CLAP', data: clap }
+                        { name: 'CLAP', data: clap },
+                        { name: 'COW', data: useDrumStore((state) => state.cowbell) }
                     ].map((d, idx) => {
                         const pattern = rotateArray(bjorklund(d.data.steps, d.data.pulses), d.data.rotate)
                         return (

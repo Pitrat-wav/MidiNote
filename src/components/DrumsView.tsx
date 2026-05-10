@@ -8,10 +8,10 @@ import { bjorklund, rotateArray } from '../logic/bjorklund'
 import { TransportControls } from './TransportControls'
 
 export function DrumsView() {
-    const { kick, snare, hihat, hihatOpen, clap, kit, drive, setParams, setKit, setDrive } = useDrumStore()
+    const { kick, snare, hihat, hihatOpen, clap, cowbell, kit, drive, setParams, setKit, setDrive } = useDrumStore()
     const { drumMachine, volumes, setVolume } = useAudioStore()
 
-    const updateDrum = (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap', params: any) => {
+    const updateDrum = (drum: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap' | 'cowbell', params: any) => {
         setParams(drum, params)
         if (drumMachine) {
             const d = useDrumStore.getState()[drum]
@@ -70,7 +70,8 @@ export function DrumsView() {
                         { id: 'snare' as const, label: 'SNARE' },
                         { id: 'hihat' as const, label: 'HI-HAT' },
                         { id: 'hihatOpen' as const, label: 'OPEN HAT' },
-                        { id: 'clap' as const, label: 'CLAP' }
+                        { id: 'clap' as const, label: 'CLAP' },
+                        { id: 'cowbell' as const, label: 'COWBELL' }
                     ].map(d => (
                         <div key={d.id} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', background: 'rgba(0,0,0,0.02)', padding: '12px', borderRadius: '12px' }}>
                             <div style={{ width: '60px', fontWeight: 'bold', fontSize: '10px' }}>{d.label}</div>
@@ -113,7 +114,8 @@ export function DrumsView() {
                         { name: 'SNARE', data: snare },
                         { name: 'HIHAT', data: hihat },
                         { name: 'OPEN', data: hihatOpen },
-                        { name: 'CLAP', data: clap }
+                        { name: 'CLAP', data: clap },
+                        { name: 'COWBELL', data: cowbell }
                     ].map((d, idx) => {
                         const pattern = rotateArray(bjorklund(d.data.steps, d.data.pulses), d.data.rotate)
                         return (

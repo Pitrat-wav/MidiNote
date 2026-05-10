@@ -7,7 +7,7 @@ import { GridWalker, SnakePattern } from './GridWalker'
 
 export function exportToMidi(
     bpm: number,
-    drums: { kick: number[], snare: number[], hihat: number[], hihatOpen: number[], clap: number[] },
+    drums: { kick: number[], snare: number[], hihat: number[], hihatOpen: number[], clap: number[], cowbell: number[] },
     bassPattern: BassStep[],
     stages: Stage[],
     snakeGrid: number[],
@@ -72,6 +72,7 @@ export function exportToMidi(
             if (drums.hihat[step % drums.hihat.length]) notes.push('F#1')
             if (drums.hihatOpen[step % drums.hihatOpen.length]) notes.push('A#1')
             if (drums.clap[step % drums.clap.length]) notes.push('D#1')
+            if (drums.cowbell[step % drums.cowbell.length]) notes.push('G#1') // Cowbell: MIDI 56 (G#1 in 0-octave or G#2 in 1-octave based on mapping)
 
             if (notes.length > 0) {
                 track2.addEvent(new MidiWriter.NoteEvent({

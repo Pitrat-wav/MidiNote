@@ -21,7 +21,7 @@ export function SequencerLoop() {
 
     // Pattern Cache to optimize performance
     const drumPatternsRef = useRef<Record<string, number[]>>({
-        kick: [], snare: [], hihat: [], hihatOpen: [], clap: []
+        kick: [], snare: [], hihat: [], hihatOpen: [], clap: [], cowbell: []
     })
 
     useEffect(() => {
@@ -42,7 +42,8 @@ export function SequencerLoop() {
                 snare: rotateArray(bjorklund(d.snare.steps, d.snare.pulses), d.snare.rotate),
                 hihat: rotateArray(bjorklund(d.hihat.steps, d.hihat.pulses), d.hihat.rotate),
                 hihatOpen: rotateArray(bjorklund(d.hihatOpen.steps, d.hihatOpen.pulses), d.hihatOpen.rotate),
-                clap: rotateArray(bjorklund(d.clap.steps, d.clap.pulses), d.clap.rotate)
+                clap: rotateArray(bjorklund(d.clap.steps, d.clap.pulses), d.clap.rotate),
+                cowbell: rotateArray(bjorklund(d.cowbell.steps, d.cowbell.pulses), d.cowbell.rotate)
             }
         }
 
@@ -72,6 +73,7 @@ export function SequencerLoop() {
             if (patterns.hihat[step % patterns.hihat.length]) drumMachine.triggerDrum('hihat', time, getVel())
             if (patterns.hihatOpen[step % patterns.hihatOpen.length]) drumMachine.triggerDrum('hihatOpen', time, getVel())
             if (patterns.clap[step % patterns.clap.length]) drumMachine.triggerDrum('clap', time, getVel())
+            if (patterns.cowbell[step % patterns.cowbell.length]) drumMachine.triggerDrum('cowbell', time, getVel())
 
             // 2. Bass (Sting logic)
             const bassStep = currentBass.pattern[step]

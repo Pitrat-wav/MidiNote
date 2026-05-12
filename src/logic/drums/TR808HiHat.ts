@@ -3,8 +3,22 @@ import { applyPitchDrift, applyVariance } from '../DrumUtils'
 
 export class TR808HiHat {
     private frequencies = [205.3, 304.4, 369.6, 522.7, 800, 540];
+    private activeOscillators: Tone.Oscillator[] = [];
+    private activeEnvGain: Tone.Gain | null = null;
 
     constructor(private destination: Tone.ToneAudioNode) { }
+
+    stop(time: number) {
+        if (this.activeEnvGain && this.activeOscillators.length > 0) {
+            // Smoothly ramp down to avoid clicks
+            this.activeEnvGain.gain.cancelScheduledValues(time);
+            this.activeEnvGain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+            this.activeOscillators.forEach(osc => osc.stop(time + 0.02));
+
+            this.activeEnvGain = null;
+            this.activeOscillators = [];
+        }
+    }
 
     trigger(time: number, isOpen: boolean, pitch: number, decay: number, velocity: number = 0.8) {
         // Create nodes
@@ -13,6 +27,8 @@ export class TR808HiHat {
         const bpf2 = new Tone.Filter(7100, "bandpass");
         const envGain = new Tone.Gain(0);
         const hpf = new Tone.Filter(7000, "highpass");
+
+        this.activeEnvGain = envGain;
 
         // Pitch Multiplier (0.8x to 1.2x)
         const pitchMultiplier = 0.8 + pitch * 0.4;
@@ -51,6 +67,7 @@ export class TR808HiHat {
         envGain.gain.exponentialRampToValueAtTime(0.001, time + decayTime);
 
         // Scheduling
+        this.activeOscillators = oscillators;
         oscillators.forEach(osc => {
             osc.start(time).stop(time + decayTime);
         });
@@ -64,6 +81,10 @@ export class TR808HiHat {
             bpf2.dispose();
             envGain.dispose();
             hpf.dispose();
+
+            // Clear references if they still point to these nodes
+            if (this.activeEnvGain === envGain) this.activeEnvGain = null;
+            if (this.activeOscillators === oscillators) this.activeOscillators = [];
         };
     }
 }

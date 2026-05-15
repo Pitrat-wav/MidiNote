@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as Tone from 'tone'
 import { useAudioStore } from '../store/audioStore'
-import { useDrumStore, useBassStore, useSequencerStore } from '../store/instrumentStore'
+import { useDrumStore, useBassStore, useSequencerStore, DrumParams } from '../store/instrumentStore'
 import { bjorklund, rotateArray } from '../logic/bjorklund'
 import { GridWalker } from '../logic/GridWalker'
 import { useHarmonyStore, usePadStore } from '../store/instrumentStore'
@@ -9,19 +9,13 @@ import { generatePadProgression } from '../logic/PadGenerator'
 
 export function SequencerLoop() {
     const { isPlaying, bassSynth, leadSynth, drumMachine, padSynth, isInitialized } = useAudioStore()
-    const drums = useDrumStore()
-    const bass = useBassStore()
-    const seq = useSequencerStore()
-    const harmony = useHarmonyStore()
-    const padState = usePadStore()
-
+    const drums = useDrumStore() // Subscribe to drum store for reactivity
     const stepRef = useRef(0)
     const stagePulseRef = useRef(0)
-    const snakeWalkerRef = useRef(new GridWalker())
 
     // Pattern Cache to optimize performance
     const drumPatternsRef = useRef<Record<string, number[]>>({
-        kick: [], snare: [], hihat: [], hihatOpen: [], clap: []
+        kick: [], snare: [], hihat: [], hihatOpen: [], clap: [], cowbell: []
     })
 
     useEffect(() => {
@@ -42,7 +36,8 @@ export function SequencerLoop() {
                 snare: rotateArray(bjorklund(d.snare.steps, d.snare.pulses), d.snare.rotate),
                 hihat: rotateArray(bjorklund(d.hihat.steps, d.hihat.pulses), d.hihat.rotate),
                 hihatOpen: rotateArray(bjorklund(d.hihatOpen.steps, d.hihatOpen.pulses), d.hihatOpen.rotate),
-                clap: rotateArray(bjorklund(d.clap.steps, d.clap.pulses), d.clap.rotate)
+                clap: rotateArray(bjorklund(d.clap.steps, d.clap.pulses), d.clap.rotate),
+                cowbell: rotateArray(bjorklund(d.cowbell.steps, d.cowbell.pulses), d.cowbell.rotate)
             }
         }
 
@@ -62,16 +57,27 @@ export function SequencerLoop() {
             const currentSeq = useSequencerStore.getState()
             const currentHarmony = useHarmonyStore.getState()
             const currentPads = usePadStore.getState()
+            const currentDrums = useDrumStore.getState()
 
             // 1. Drums (Euclidean - using cached patterns)
             const patterns = drumPatternsRef.current
-            const getVel = () => 0.7 + Math.random() * 0.3 // Randomize velocity 0.7 - 1.0
 
-            if (patterns.kick[step % patterns.kick.length]) drumMachine.triggerDrum('kick', time, getVel())
-            if (patterns.snare[step % patterns.snare.length]) drumMachine.triggerDrum('snare', time, getVel())
-            if (patterns.hihat[step % patterns.hihat.length]) drumMachine.triggerDrum('hihat', time, getVel())
-            if (patterns.hihatOpen[step % patterns.hihatOpen.length]) drumMachine.triggerDrum('hihatOpen', time, getVel())
-            if (patterns.clap[step % patterns.clap.length]) drumMachine.triggerDrum('clap', time, getVel())
+            const triggerDrumWithProb = (name: 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap' | 'cowbell', params: DrumParams) => {
+                if (patterns[name][step % patterns[name].length]) {
+                    const shouldPlay = Math.random() < params.probability
+                    if (shouldPlay) {
+                        const vel = 0.7 + Math.random() * 0.3
+                        drumMachine.triggerDrum(name, time, vel)
+                    }
+                }
+            }
+
+            triggerDrumWithProb('kick', currentDrums.kick)
+            triggerDrumWithProb('snare', currentDrums.snare)
+            triggerDrumWithProb('hihat', currentDrums.hihat)
+            triggerDrumWithProb('hihatOpen', currentDrums.hihatOpen)
+            triggerDrumWithProb('clap', currentDrums.clap)
+            triggerDrumWithProb('cowbell', currentDrums.cowbell)
 
             // 2. Bass (Sting logic)
             const bassStep = currentBass.pattern[step]
@@ -106,14 +112,11 @@ export function SequencerLoop() {
                 } else if (stage.gateMode === 2) { // Multi start
                     triggerStep('16n', stage.velocity, true)
                 } else if (stage.gateMode === 3) { // Hold/Tie
-                    // Hold mode: trigger note (longer duration) but DO NOT advance snake index (repeat same pitch)
-                    // Added probability check here
                     triggerStep('8n', stage.velocity, false)
                 }
             } else if (stage.gateMode === 2) { // Multi pulse repeats
                 const pulseStep = stagePulseRef.current % Math.max(1, stage.length)
                 if (pulseStep === 0) {
-                    // Multi repeats: shorter duration, slightly lower velocity, advance snake
                     triggerStep('32n', stage.velocity * 0.8, true)
                 }
             }

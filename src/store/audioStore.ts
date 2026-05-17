@@ -22,6 +22,7 @@ export interface AudioState {
         hihat: number,
         hihatOpen: number,
         clap: number,
+        cowbell: number,
         pads: number
     }
     initialize: () => Promise<void>
@@ -29,7 +30,7 @@ export interface AudioState {
     setBpm: (bpm: number) => void
     setSwing: (swing: number) => void
     setCurrentStep: (step: number) => void
-    setVolume: (channel: 'bass' | 'lead' | 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap' | 'pads', value: number) => void
+    setVolume: (channel: 'bass' | 'lead' | 'kick' | 'snare' | 'hihat' | 'hihatOpen' | 'clap' | 'cowbell' | 'pads', value: number) => void
 }
 
 export const useAudioStore = create<AudioState>((set, get) => ({
@@ -42,7 +43,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
     leadSynth: null,
     drumMachine: null,
     padSynth: null,
-    volumes: { bass: 0.8, lead: 0.8, kick: 0.8, snare: 0.8, hihat: 0.8, hihatOpen: 0.8, clap: 0.8, pads: 0.5 },
+    volumes: { bass: 0.8, lead: 0.8, kick: 0.8, snare: 0.8, hihat: 0.8, hihatOpen: 0.8, clap: 0.8, cowbell: 0.8, pads: 0.5 },
 
     initialize: async () => {
         if (get().isInitialized) return
@@ -95,6 +96,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
             if (channel === 'hihat') drumMachine.outputHihat.gain.value = value
             if (channel === 'hihatOpen') drumMachine.outputOpenHat.gain.value = value
             if (channel === 'clap') drumMachine.outputClap.gain.value = value
+            if (channel === 'cowbell') drumMachine.outputCowbell.gain.value = value
         }
 
         if (channel === 'pads' && padSynth) padSynth.synth.volume.value = Tone.gainToDb(value)

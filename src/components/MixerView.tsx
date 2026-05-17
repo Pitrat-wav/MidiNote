@@ -58,6 +58,13 @@ export function MixerView() {
                     size={48}
                 />
                 <Knob
+                    label="Cow"
+                    value={volumes.cowbell}
+                    min={0} max={1} step={0.01}
+                    onChange={(v) => setVolume('cowbell', v)}
+                    size={48}
+                />
+                <Knob
                     label="Pads"
                     value={volumes.pads}
                     min={0} max={1} step={0.01}

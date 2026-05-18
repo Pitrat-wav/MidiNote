@@ -120,7 +120,8 @@ function App() {
                 snare: bjorklund(drums.snare.steps, drums.snare.pulses),
                 hihat: bjorklund(drums.hihat.steps, drums.hihat.pulses),
                 hihatOpen: bjorklund(drums.hihatOpen.steps, drums.hihatOpen.pulses),
-                clap: bjorklund(drums.clap.steps, drums.clap.pulses)
+                clap: bjorklund(drums.clap.steps, drums.clap.pulses),
+                cowbell: bjorklund(drums.cowbell.steps, drums.cowbell.pulses)
             }
 
             // 2. Generate MIDI

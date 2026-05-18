@@ -3,6 +3,7 @@ import { applyPitchDrift, applyVariance } from '../DrumUtils'
 
 export class TR808HiHat {
     private frequencies = [205.3, 304.4, 369.6, 522.7, 800, 540];
+    private activeGains: Set<Tone.Gain> = new Set();
 
     constructor(private destination: Tone.ToneAudioNode) { }
 
@@ -12,6 +13,7 @@ export class TR808HiHat {
         const bpf1 = new Tone.Filter(3440, "bandpass");
         const bpf2 = new Tone.Filter(7100, "bandpass");
         const envGain = new Tone.Gain(0);
+        this.activeGains.add(envGain);
         const hpf = new Tone.Filter(7000, "highpass");
 
         // Pitch Multiplier (0.8x to 1.2x)
@@ -64,6 +66,15 @@ export class TR808HiHat {
             bpf2.dispose();
             envGain.dispose();
             hpf.dispose();
+            this.activeGains.delete(envGain);
         };
+    }
+
+    stop(time: number) {
+        this.activeGains.forEach(gain => {
+            gain.gain.cancelScheduledValues(time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+        });
+        this.activeGains.clear();
     }
 }
